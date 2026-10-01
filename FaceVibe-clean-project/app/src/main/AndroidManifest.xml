@@ -7,7 +7,7 @@
     <application
         android:allowBackup="false"
         android:label="FaceVibe"
-        android:theme="@style/Theme.FaceVibe">
+        android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
         <activity
             android:name=".MainActivity"
             android:exported="true"
