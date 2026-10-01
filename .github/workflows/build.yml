@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: faceVIBE/FaceVibe-clean-project
+        working-directory: FaceVibe-clean-project
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -21,4 +21,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: FaceVibe-debug-apk
-          path: faceVIBE/FaceVibe-clean-project/app/build/outputs/apk/debug/app-debug.apk
+          path: FaceVibe-clean-project/app/build/outputs/apk/debug/app-debug.apk
