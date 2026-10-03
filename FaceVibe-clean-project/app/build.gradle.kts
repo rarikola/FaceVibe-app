@@ -18,7 +18,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.facevibe.app"
+        applicationId = "com.face2emoji.app"
         minSdk = 26
         targetSdk = 34
         versionCode = 3

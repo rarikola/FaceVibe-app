@@ -6,7 +6,7 @@
 
     <application
         android:allowBackup="false"
-        android:label="FaceVibe"
+        android:label="face2emoji"
         android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
         <activity
             android:name=".MainActivity"
