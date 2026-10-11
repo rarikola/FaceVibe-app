@@ -43,9 +43,12 @@ class MainActivity : ComponentActivity() {
 
     // 30-emoji template matcher
     private var tpl: EmojiTemplates? = null
-    private var curEmoji = 0
-    private var pendEmoji = -1
-    private var pendEmojiCount = 0
+    private var featEma: FloatArray? = null
+    private var curGroup = 0
+    private var pendGroup = -1
+    private var pendCount = 0
+    private var lastSwitch = 0L
+    private var shownEmoji = ""
 
     private var frames = 0
     private var fps = 0
@@ -147,6 +150,7 @@ class MainActivity : ComponentActivity() {
 
         if (!f.hasFace) {
             emotions.onNoFace()
+            featEma = null
             setStatus("No face", GREY)
             diag.update(emptyList())
             return
@@ -185,39 +189,50 @@ class MainActivity : ComponentActivity() {
         diag.update(rows)
     }
 
-    /** 30-emoji matcher on the calibrated, smoothed face. */
+    /** Emoji-group matcher on the calibrated, smoothed face. Switches slowly so it does not flicker. */
     private fun updateEmoji() {
         val t = tpl ?: return
-        val x = t.features(emotions.smoothed())
-        val target: Int
-        val sims = t.similarities(x)
-        if (t.isNeutral(x)) {
-            target = 0
+        val raw = t.features(emotions.smoothed())
+        val prev = featEma
+        val x: FloatArray
+        if (prev == null) {
+            x = raw
         } else {
-            var b = 1
-            for (i in 1 until sims.size) if (sims[i] > sims[b]) b = i
-            target = b
+            for (i in raw.indices) prev[i] += FEATURE_ALPHA * (raw[i] - prev[i])
+            x = prev
         }
-        if (target != curEmoji) {
-            val curSim = if (curEmoji == 0) 0.2f else sims[curEmoji]
-            val decisive = target == 0 || sims[target] > curSim + 0.05f
+        featEma = x
+
+        val sims = t.similarities(x)
+        var target = 0
+        if (!t.isNeutral(x)) {
+            target = 1
+            for (i in 1 until sims.size) if (sims[i] > sims[target]) target = i
+        }
+        val now = SystemClock.uptimeMillis()
+        if (target != curGroup) {
+            val curSim = if (curGroup == 0) 0.2f else sims[curGroup]
+            val decisive = target == 0 || sims[target] > curSim + SWITCH_MARGIN
             if (decisive) {
-                if (target == pendEmoji) pendEmojiCount++ else { pendEmoji = target; pendEmojiCount = 1 }
-                if (pendEmojiCount >= 6) {
-                    curEmoji = target
-                    pendEmoji = -1
-                    pendEmojiCount = 0
+                if (target == pendGroup) pendCount++ else { pendGroup = target; pendCount = 1 }
+                if (pendCount >= HOLD_FRAMES && now - lastSwitch >= MIN_DWELL_MS) {
+                    curGroup = target
+                    shownEmoji = t.templates[target].emojis.random()
+                    lastSwitch = now
+                    pendGroup = -1
+                    pendCount = 0
                 }
             } else {
-                pendEmoji = -1
-                pendEmojiCount = 0
+                pendGroup = -1
+                pendCount = 0
             }
         } else {
-            pendEmoji = -1
-            pendEmojiCount = 0
+            pendGroup = -1
+            pendCount = 0
         }
-        val m = t.templates[curEmoji]
-        emoji.text = m.emoji
+        val m = t.templates[curGroup]
+        if (shownEmoji.isEmpty()) shownEmoji = m.emojis.random()
+        emoji.text = shownEmoji
         emojiLabels.visibility = View.VISIBLE
         emojiLabels.text = m.label1 + "\n" + m.label2
     }
@@ -230,6 +245,11 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val FEATURE_ALPHA = 0.2f   // extra smoothing on the face pattern
+        private const val HOLD_FRAMES = 14        // ~0.6 s of consistent evidence before switching
+        private const val MIN_DWELL_MS = 900L     // never switch twice within this time
+        private const val SWITCH_MARGIN = 0.08f   // new group must beat the current one by this much
+
         private val GREEN = Color.parseColor("#2ECC71")
         private val AMBER = Color.parseColor("#F5A623")
         private val RED = Color.parseColor("#E5484D")

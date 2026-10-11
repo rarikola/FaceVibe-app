@@ -5,9 +5,10 @@ import org.json.JSONObject
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/** One emoji with its two labels and its face template (feature -> target, weight). */
+/** A group of similar emojis sharing one face template and one pair of labels. */
 class EmojiTemplate(
-    val emoji: String,
+    val category: String,      // internal name only, never shown
+    val emojis: List<String>,  // one of these is shown, picked at random
     val label1: String,
     val label2: String,
     val targets: FloatArray,   // per feature
@@ -39,7 +40,9 @@ class EmojiTemplates(context: Context) {
                     w[idx] = sqrt(pair.getDouble(1)).toFloat()
                 }
             }
-            list.add(EmojiTemplate(o.getString("emoji"), o.getString("label1"), o.getString("label2"), tg, w))
+            val ea = o.getJSONArray("emojis")
+            val em = List(ea.length()) { ea.getString(it) }
+            list.add(EmojiTemplate(o.getString("category"), em, o.getString("label1"), o.getString("label2"), tg, w))
         }
         templates = list
         neutralWeights = FloatArray(FEATURES.size) { sqrt(DEFAULT_WEIGHT) }

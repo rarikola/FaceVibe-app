@@ -1,12 +1,20 @@
 [
  {
-  "emoji": "😐",
+  "category": "neutral",
+  "emojis": [
+   "😐",
+   "😑"
+  ],
   "label1": "Neutral / calm",
   "label2": "Nothing to see here.",
   "t": {}
  },
  {
-  "emoji": "🙂",
+  "category": "slight smile",
+  "emojis": [
+   "🙂",
+   "😊"
+  ],
   "label1": "Content / mild pleasure",
   "label2": "Yeah, that's nice.",
   "t": {
@@ -21,49 +29,38 @@
   }
  },
  {
-  "emoji": "😀",
+  "category": "grinning face",
+  "emojis": [
+   "😀",
+   "😃",
+   "😄"
+  ],
   "label1": "Joy / cheerful excitement",
   "label2": "Hey, this is great!",
   "t": {
    "smile": [
-    0.6,
-    2.5
-   ],
-   "jaw": [
-    0.25,
-    1.5
-   ],
-   "cheekSq": [
-    0.25,
-    1
-   ]
-  }
- },
- {
-  "emoji": "😄",
-  "label1": "Delight / warm amusement",
-  "label2": "Ha! Now that's funny!",
-  "t": {
-   "smile": [
-    0.75,
+    0.7,
     2.5
    ],
    "cheekSq": [
-    0.5,
+    0.4,
     2
    ],
    "squint": [
-    0.35,
-    1.5
-   ],
-   "jaw": [
     0.2,
     1
+   ],
+   "jaw": [
+    0.22,
+    1.5
    ]
   }
  },
  {
-  "emoji": "😁",
+  "category": "grinning with teeth",
+  "emojis": [
+   "😁"
+  ],
   "label1": "Beaming / proud grin",
   "label2": "Look at that!",
   "t": {
@@ -86,7 +83,12 @@
   }
  },
  {
-  "emoji": "😆",
+  "category": "laughing",
+  "emojis": [
+   "😆",
+   "😂",
+   "🤣"
+  ],
   "label1": "Hearty laughter / hilarity",
   "label2": "Oh, that's too much!",
   "t": {
@@ -109,7 +111,10 @@
   }
  },
  {
-  "emoji": "😉",
+  "category": "winking",
+  "emojis": [
+   "😉"
+  ],
   "label1": "Playful / knowing wink",
   "label2": "Just between us.",
   "t": {
@@ -128,7 +133,12 @@
   }
  },
  {
-  "emoji": "😛",
+  "category": "tongue out",
+  "emojis": [
+   "😛",
+   "😜",
+   "🤪"
+  ],
   "label1": "Cheeky / silly",
   "label2": "Nyah!",
   "t": {
@@ -147,16 +157,20 @@
   }
  },
  {
-  "emoji": "😮",
+  "category": "surprised",
+  "emojis": [
+   "😮",
+   "😯"
+  ],
   "label1": "Surprise / mild shock",
   "label2": "Oh! Didn't see that coming.",
   "t": {
    "jaw": [
-    0.45,
+    0.35,
     2.5
    ],
    "browInUp": [
-    0.4,
+    0.35,
     1.5
    ],
    "browOutUp": [
@@ -164,13 +178,17 @@
     1
    ],
    "wide": [
-    0.35,
+    0.3,
     1.5
    ]
   }
  },
  {
-  "emoji": "😲",
+  "category": "astonished",
+  "emojis": [
+   "😲",
+   "😳"
+  ],
   "label1": "Astonishment / disbelief",
   "label2": "Wait, what?!",
   "t": {
@@ -193,26 +211,10 @@
   }
  },
  {
-  "emoji": "😯",
-  "label1": "Taken aback / hushed",
-  "label2": "Oh... wow.",
-  "t": {
-   "jaw": [
-    0.25,
-    2
-   ],
-   "browInUp": [
-    0.3,
-    1.5
-   ],
-   "funnel": [
-    0.2,
-    1
-   ]
-  }
- },
- {
-  "emoji": "🤔",
+  "category": "thinking",
+  "emojis": [
+   "🤔"
+  ],
   "label1": "Thinking / pondering",
   "label2": "Hmm, let me think.",
   "t": {
@@ -235,7 +237,11 @@
   }
  },
  {
-  "emoji": "🤨",
+  "category": "raised eyebrow",
+  "emojis": [
+   "🤨",
+   "🧐"
+  ],
   "label1": "Skepticism / raised brow",
   "label2": "Really? Are you sure?",
   "t": {
@@ -250,7 +256,10 @@
   }
  },
  {
-  "emoji": "😒",
+  "category": "unamused",
+  "emojis": [
+   "😒"
+  ],
   "label1": "Unimpressed / sceptical",
   "label2": "Yeah, sure, whatever.",
   "t": {
@@ -273,7 +282,10 @@
   }
  },
  {
-  "emoji": "🙄",
+  "category": "eye roll",
+  "emojis": [
+   "🙄"
+  ],
   "label1": "Exasperated / eye roll",
   "label2": "Oh, come on.",
   "t": {
@@ -292,7 +304,10 @@
   }
  },
  {
-  "emoji": "😏",
+  "category": "smirking",
+  "emojis": [
+   "😏"
+  ],
   "label1": "Smug / sly confidence",
   "label2": "Told you so.",
   "t": {
@@ -315,7 +330,10 @@
   }
  },
  {
-  "emoji": "😬",
+  "category": "grimacing",
+  "emojis": [
+   "😬"
+  ],
   "label1": "Awkward / nervous grimace",
   "label2": "Uh... that's awkward.",
   "t": {
@@ -338,7 +356,12 @@
   }
  },
  {
-  "emoji": "😢",
+  "category": "sad",
+  "emojis": [
+   "😢",
+   "😞",
+   "😔"
+  ],
   "label1": "Sadness / quiet hurt",
   "label2": "That's so sad.",
   "t": {
@@ -357,7 +380,10 @@
   }
  },
  {
-  "emoji": "😭",
+  "category": "sobbing",
+  "emojis": [
+   "😭"
+  ],
   "label1": "Heartbreak / sobbing",
   "label2": "I can't take it.",
   "t": {
@@ -384,7 +410,10 @@
   }
  },
  {
-  "emoji": "🥺",
+  "category": "pleading",
+  "emojis": [
+   "🥺"
+  ],
   "label1": "Pleading / tender plea",
   "label2": "Please? Pretty please?",
   "t": {
@@ -407,7 +436,10 @@
   }
  },
  {
-  "emoji": "😠",
+  "category": "angry",
+  "emojis": [
+   "😠"
+  ],
   "label1": "Anger / stern warning",
   "label2": "Don't push it.",
   "t": {
@@ -430,7 +462,11 @@
   }
  },
  {
-  "emoji": "😡",
+  "category": "furious",
+  "emojis": [
+   "😡",
+   "🤬"
+  ],
   "label1": "Fury / rage",
   "label2": "That's it. I'm done.",
   "t": {
@@ -461,7 +497,11 @@
   }
  },
  {
-  "emoji": "🤢",
+  "category": "disgusted",
+  "emojis": [
+   "🤢",
+   "🤮"
+  ],
   "label1": "Disgust / revulsion",
   "label2": "Ew! That's gross!",
   "t": {
@@ -488,7 +528,10 @@
   }
  },
  {
-  "emoji": "😱",
+  "category": "screaming in fear",
+  "emojis": [
+   "😱"
+  ],
   "label1": "Terror / screaming shock",
   "label2": "Oh my god!",
   "t": {
@@ -515,7 +558,11 @@
   }
  },
  {
-  "emoji": "😨",
+  "category": "fearful",
+  "emojis": [
+   "😨",
+   "😰"
+  ],
   "label1": "Fear / dread",
   "label2": "Please tell me it's not true.",
   "t": {
@@ -542,7 +589,10 @@
   }
  },
  {
-  "emoji": "😴",
+  "category": "sleeping",
+  "emojis": [
+   "😴"
+  ],
   "label1": "Sleepy / out cold",
   "label2": "Zzz...",
   "t": {
@@ -557,7 +607,10 @@
   }
  },
  {
-  "emoji": "🥱",
+  "category": "yawning",
+  "emojis": [
+   "🥱"
+  ],
   "label1": "Tired / yawning",
   "label2": "So... tired.",
   "t": {
@@ -584,7 +637,12 @@
   }
  },
  {
-  "emoji": "😘",
+  "category": "blowing a kiss",
+  "emojis": [
+   "😘",
+   "😗",
+   "😙"
+  ],
   "label1": "Affection / blowing a kiss",
   "label2": "Mwah!",
   "t": {
@@ -603,7 +661,10 @@
   }
  },
  {
-  "emoji": "😌",
+  "category": "relieved",
+  "emojis": [
+   "😌"
+  ],
   "label1": "Relief / peaceful",
   "label2": "Ahh, finally.",
   "t": {
@@ -622,7 +683,11 @@
   }
  },
  {
-  "emoji": "😩",
+  "category": "weary",
+  "emojis": [
+   "😩",
+   "😫"
+  ],
   "label1": "Weary / fed up",
   "label2": "Why does this always happen to me?",
   "t": {
