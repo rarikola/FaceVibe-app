@@ -42,6 +42,9 @@ class EmotionEngine {
     private var pending: Emotion? = null
     private var pendingCount = 0
 
+    /** Baseline-subtracted, smoothed values (empty while calibrating). */
+    fun smoothed(): Map<String, Float> = if (calibrating) emptyMap() else smooth
+
     /** The user's neutral-face baseline (empty until calibration has finished). */
     fun baselineMap(): Map<String, Float> = baseline
 

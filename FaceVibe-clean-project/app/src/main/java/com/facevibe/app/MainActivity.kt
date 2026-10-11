@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var statusDot: View
     private lateinit var diag: DiagView
     private lateinit var emoji: TextView
+    private lateinit var emojiLabels: TextView
     private lateinit var jokeCard: View
     private lateinit var jokeSetup: TextView
     private lateinit var jokePunch: TextView
@@ -46,6 +47,12 @@ class MainActivity : ComponentActivity() {
     private var engine: FaceEngine? = null
     private val emotions = EmotionEngine()
     private val handler = Handler(Looper.getMainLooper())
+
+    // 30-emoji template matcher
+    private var tpl: EmojiTemplates? = null
+    private var curEmoji = 0
+    private var pendEmoji = -1
+    private var pendEmojiCount = 0
 
     // expression database lookup
     private var db: ExpressionDb? = null
@@ -75,6 +82,13 @@ class MainActivity : ComponentActivity() {
         statusDot = findViewById(R.id.statusDot)
         diag = findViewById(R.id.diag)
         emoji = findViewById(R.id.emoji)
+        emojiLabels = findViewById(R.id.emojiLabels)
+        try {
+            tpl = EmojiTemplates(applicationContext)
+        } catch (t: Throwable) {
+            emojiLabels.visibility = View.VISIBLE
+            emojiLabels.text = "templates error: ${t.javaClass.simpleName}"
+        }
         jokeCard = findViewById(R.id.jokeCard)
         jokeSetup = findViewById(R.id.jokeSetup)
         jokePunch = findViewById(R.id.jokePunch)
@@ -210,9 +224,10 @@ class MainActivity : ComponentActivity() {
         val st = emotions.update(f.blend)
         if (st.calibrating) {
             emoji.text = "🙂"
+            emojiLabels.visibility = View.GONE
             setStatus("Hold a neutral face… ${(st.calibrationProgress * 100).toInt()}%", AMBER)
         } else {
-            emoji.text = st.current.emoji
+            updateEmoji()
             setStatus("LIVE", GREEN)
         }
 
@@ -239,6 +254,43 @@ class MainActivity : ComponentActivity() {
             rows.add(DiagView.Row("roll", abs(p[2]) / 45f, "%.0f°".format(p[2])))
         }
         diag.update(rows)
+    }
+
+    /** 30-emoji matcher on the calibrated, smoothed face. */
+    private fun updateEmoji() {
+        val t = tpl ?: return
+        val x = t.features(emotions.smoothed())
+        val target: Int
+        val sims = t.similarities(x)
+        if (t.isNeutral(x)) {
+            target = 0
+        } else {
+            var b = 1
+            for (i in 1 until sims.size) if (sims[i] > sims[b]) b = i
+            target = b
+        }
+        if (target != curEmoji) {
+            val curSim = if (curEmoji == 0) 0.2f else sims[curEmoji]
+            val decisive = target == 0 || sims[target] > curSim + 0.05f
+            if (decisive) {
+                if (target == pendEmoji) pendEmojiCount++ else { pendEmoji = target; pendEmojiCount = 1 }
+                if (pendEmojiCount >= 6) {
+                    curEmoji = target
+                    pendEmoji = -1
+                    pendEmojiCount = 0
+                }
+            } else {
+                pendEmoji = -1
+                pendEmojiCount = 0
+            }
+        } else {
+            pendEmoji = -1
+            pendEmojiCount = 0
+        }
+        val m = t.templates[curEmoji]
+        emoji.text = m.emoji
+        emojiLabels.visibility = View.VISIBLE
+        emojiLabels.text = m.label1 + "\n" + m.label2
     }
 
     /** Nearest labelled image to the live face -> show its label. */

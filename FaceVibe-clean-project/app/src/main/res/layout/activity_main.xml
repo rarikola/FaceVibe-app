@@ -78,6 +78,28 @@
         android:text="🙂"
         android:textSize="46sp" />
 
+    <!-- the two labels of the matched emoji, under the emoji card -->
+    <TextView
+        android:id="@+id/emojiLabels"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="106dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_pill"
+        android:elevation="6dp"
+        android:gravity="end"
+        android:maxWidth="190dp"
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp"
+        android:text=""
+        android:textColor="#1B1B1F"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <!-- nearest-image caption (from the expression database), bottom centre; tap = switch mode -->
     <LinearLayout
         android:id="@+id/captionCard"
