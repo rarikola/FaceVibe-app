@@ -42,6 +42,9 @@ class EmotionEngine {
     private var pending: Emotion? = null
     private var pendingCount = 0
 
+    /** The user's neutral-face baseline (empty until calibration has finished). */
+    fun baselineMap(): Map<String, Float> = baseline
+
     fun recalibrate() {
         calibrating = true
         resetCalibrationAccumulators()

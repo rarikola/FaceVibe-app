@@ -78,6 +78,44 @@
         android:text="🙂"
         android:textSize="46sp" />
 
+    <!-- nearest-image caption (from the expression database), bottom centre; tap = switch mode -->
+    <LinearLayout
+        android:id="@+id/captionCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="96dp"
+        android:background="@drawable/bg_pill"
+        android:elevation="6dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="18dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/captionMain"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="300dp"
+            android:gravity="center"
+            android:text="…"
+            android:textColor="#1B1B1F"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/captionSub"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="300dp"
+            android:gravity="center"
+            android:text="tap to switch mode"
+            android:textColor="#77777F"
+            android:textSize="11sp" />
+    </LinearLayout>
+
     <!-- LIVE / status pill, bottom left -->
     <LinearLayout
         android:id="@+id/statusPill"

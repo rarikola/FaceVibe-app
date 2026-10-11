@@ -39,10 +39,21 @@ class MainActivity : ComponentActivity() {
     private lateinit var jokeSetup: TextView
     private lateinit var jokePunch: TextView
     private lateinit var jokeHint: TextView
+    private lateinit var captionCard: View
+    private lateinit var captionMain: TextView
+    private lateinit var captionSub: TextView
     private lateinit var analysisExecutor: ExecutorService
     private var engine: FaceEngine? = null
     private val emotions = EmotionEngine()
     private val handler = Handler(Looper.getMainLooper())
+
+    // expression database lookup
+    private var db: ExpressionDb? = null
+    private var calibratedMode = false          // false = raw vector, true = baseline-shifted
+    private var ema: FloatArray? = null
+    private var shownMatch: Match? = null
+    private var pendingId = -1
+    private var pendingCount = 0
 
     private var frames = 0
     private var fps = 0
@@ -68,6 +79,23 @@ class MainActivity : ComponentActivity() {
         jokeSetup = findViewById(R.id.jokeSetup)
         jokePunch = findViewById(R.id.jokePunch)
         jokeHint = findViewById(R.id.jokeHint)
+        captionCard = findViewById(R.id.captionCard)
+        captionMain = findViewById(R.id.captionMain)
+        captionSub = findViewById(R.id.captionSub)
+        try {
+            db = ExpressionDb(applicationContext)
+        } catch (t: Throwable) {
+            captionMain.text = "database error"
+            captionSub.text = "${t.javaClass.simpleName}: ${t.message}"
+        }
+        captionCard.setOnClickListener {
+            calibratedMode = !calibratedMode
+            ema = null
+            shownMatch = null
+            pendingId = -1
+            pendingCount = 0
+            captionSub.text = if (calibratedMode) "mode: calibrated" else "mode: raw"
+        }
 
         statusDot.background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
@@ -172,6 +200,8 @@ class MainActivity : ComponentActivity() {
 
         if (!f.hasFace) {
             emotions.onNoFace()
+            ema = null
+            shownMatch = null
             setStatus("No face", GREY)
             diag.update(emptyList())
             return
@@ -185,6 +215,8 @@ class MainActivity : ComponentActivity() {
             emoji.text = st.current.emoji
             setStatus("LIVE", GREEN)
         }
+
+        updateCaption(f.blend, st.calibrating)
 
         val rows = ArrayList<DiagView.Row>()
         fun g(k: String) = f.blend[k] ?: 0f
@@ -209,6 +241,53 @@ class MainActivity : ComponentActivity() {
         diag.update(rows)
     }
 
+    /** Nearest labelled image to the live face -> show its label. */
+    private fun updateCaption(blend: Map<String, Float>, calibrating: Boolean) {
+        val d = db ?: return
+        val v = d.toVector(blend)
+        if (calibratedMode) {
+            if (calibrating) {
+                captionMain.text = "…"
+                return
+            }
+            // move the user's neutral face onto the database's average face
+            val base = emotions.baselineMap()
+            for (i in v.indices) {
+                v[i] = (v[i] - (base[d.names[i]] ?: 0f) + d.mean[i]).coerceIn(0f, 1f)
+            }
+        }
+        val prev = ema
+        val s: FloatArray
+        if (prev == null) {
+            s = v
+        } else {
+            for (i in v.indices) prev[i] += 0.4f * (v[i] - prev[i])
+            s = prev
+        }
+        ema = s
+
+        val best = d.nearest(s, 1).firstOrNull() ?: return
+        val cur = shownMatch
+        if (cur == null) {
+            shownMatch = best
+        } else if (best.id != cur.id) {
+            if (best.id == pendingId) pendingCount++ else { pendingId = best.id; pendingCount = 1 }
+            if (pendingCount >= HOLD_FRAMES) {
+                shownMatch = best
+                pendingId = -1
+                pendingCount = 0
+            }
+        } else {
+            pendingId = -1
+            pendingCount = 0
+        }
+        val m = shownMatch ?: return
+        captionMain.text = m.labels.firstOrNull() ?: "…"
+        val others = m.labels.drop(1).joinToString(" · ")
+        val tail = "#${m.id}  d=%.2f  %s".format(best.dist, if (calibratedMode) "calibrated" else "raw")
+        captionSub.text = if (others.isEmpty()) tail else "$others\n$tail"
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
@@ -217,6 +296,8 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val HOLD_FRAMES = 5
+
         private val GREEN = Color.parseColor("#2ECC71")
         private val AMBER = Color.parseColor("#F5A623")
         private val RED = Color.parseColor("#E5484D")
