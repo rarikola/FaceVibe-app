@@ -24,7 +24,7 @@ import kotlin.math.abs
 
 /**
  * Milestone 3 (UI pass): mirrored full-screen front camera, on-device face analysis,
- * emoji card (upper right), joke card (upper left), LIVE status pill (bottom left).
+ * emoji card (upper right) with its two labels (upper left), LIVE status pill (bottom left).
  * Tap the picture = show/hide diagnostics, long-press = recalibrate.
  * Nothing is recorded or uploaded.
  */
@@ -36,13 +36,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var diag: DiagView
     private lateinit var emoji: TextView
     private lateinit var emojiLabels: TextView
-    private lateinit var jokeCard: View
-    private lateinit var jokeSetup: TextView
-    private lateinit var jokePunch: TextView
-    private lateinit var jokeHint: TextView
-    private lateinit var captionCard: View
-    private lateinit var captionMain: TextView
-    private lateinit var captionSub: TextView
     private lateinit var analysisExecutor: ExecutorService
     private var engine: FaceEngine? = null
     private val emotions = EmotionEngine()
@@ -54,20 +47,9 @@ class MainActivity : ComponentActivity() {
     private var pendEmoji = -1
     private var pendEmojiCount = 0
 
-    // expression database lookup
-    private var db: ExpressionDb? = null
-    private var calibratedMode = false          // false = raw vector, true = baseline-shifted
-    private var ema: FloatArray? = null
-    private var shownId = -1
-    private var pendingId = -1
-    private var pendingCount = 0
-
     private var frames = 0
     private var fps = 0
     private var lastFpsTime = 0L
-
-    private var jokeIndex = 0
-    private var revealed = false
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -89,28 +71,6 @@ class MainActivity : ComponentActivity() {
             emojiLabels.visibility = View.VISIBLE
             emojiLabels.text = "templates error: ${t.javaClass.simpleName}"
         }
-        jokeCard = findViewById(R.id.jokeCard)
-        jokeSetup = findViewById(R.id.jokeSetup)
-        jokePunch = findViewById(R.id.jokePunch)
-        jokeHint = findViewById(R.id.jokeHint)
-        captionCard = findViewById(R.id.captionCard)
-        captionMain = findViewById(R.id.captionMain)
-        captionSub = findViewById(R.id.captionSub)
-        try {
-            db = ExpressionDb(applicationContext)
-        } catch (t: Throwable) {
-            captionMain.text = "database error"
-            captionSub.text = "${t.javaClass.simpleName}: ${t.message}"
-        }
-        captionCard.setOnClickListener {
-            calibratedMode = !calibratedMode
-            ema = null
-            shownId = -1
-            pendingId = -1
-            pendingCount = 0
-            captionSub.text = if (calibratedMode) "mode: calibrated" else "mode: raw"
-        }
-
         statusDot.background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(GREY)
@@ -124,9 +84,6 @@ class MainActivity : ComponentActivity() {
             emotions.recalibrate()
             true
         }
-        jokeCard.setOnClickListener { revealPunchline() }
-        applySetup()
-
         analysisExecutor = Executors.newSingleThreadExecutor()
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -137,30 +94,6 @@ class MainActivity : ComponentActivity() {
     private fun setStatus(text: String, color: Int) {
         statusText.text = text
         (statusDot.background as? GradientDrawable)?.setColor(color)
-    }
-
-    // ---- joke card: setup -> tap -> punchline -> (after a few seconds) next setup ----
-
-    private fun applySetup() {
-        revealed = false
-        jokeSetup.text = JOKES[jokeIndex].first
-        jokePunch.visibility = View.GONE
-        jokeHint.visibility = View.VISIBLE
-    }
-
-    private fun revealPunchline() {
-        if (revealed) return
-        revealed = true
-        jokePunch.text = JOKES[jokeIndex].second
-        jokePunch.visibility = View.VISIBLE
-        jokeHint.visibility = View.GONE
-        handler.postDelayed({
-            jokeIndex = (jokeIndex + 1) % JOKES.size
-            jokeCard.animate().alpha(0f).setDuration(250).withEndAction {
-                applySetup()
-                jokeCard.animate().alpha(1f).setDuration(250).start()
-            }.start()
-        }, 8000)
     }
 
     // ---- camera + analysis ----
@@ -214,8 +147,6 @@ class MainActivity : ComponentActivity() {
 
         if (!f.hasFace) {
             emotions.onNoFace()
-            ema = null
-            shownId = -1
             setStatus("No face", GREY)
             diag.update(emptyList())
             return
@@ -230,8 +161,6 @@ class MainActivity : ComponentActivity() {
             updateEmoji()
             setStatus("LIVE", GREEN)
         }
-
-        updateCaption(f.blend, st.calibrating)
 
         val rows = ArrayList<DiagView.Row>()
         fun g(k: String) = f.blend[k] ?: 0f
@@ -293,58 +222,6 @@ class MainActivity : ComponentActivity() {
         emojiLabels.text = m.label1 + "\n" + m.label2
     }
 
-    /** Nearest labelled image to the live face -> show its label. */
-    private fun updateCaption(blend: Map<String, Float>, calibrating: Boolean) {
-        val d = db ?: return
-        val v = d.toVector(blend)
-        if (calibratedMode) {
-            if (calibrating) {
-                captionMain.text = "…"
-                return
-            }
-            // move the user's neutral face onto the database's average face
-            val base = emotions.baselineMap()
-            for (i in v.indices) {
-                v[i] = (v[i] - (base[d.names[i]] ?: 0f) + d.mean[i]).coerceIn(0f, 1f)
-            }
-        }
-        val prev = ema
-        val s: FloatArray
-        if (prev == null) {
-            s = v
-        } else {
-            for (i in v.indices) prev[i] += 0.25f * (v[i] - prev[i])
-            s = prev
-        }
-        ema = s
-
-        val adj = d.adjusted(s)
-        var bi = 0
-        for (i in adj.indices) if (adj[i] < adj[bi]) bi = i
-        if (shownId < 0) {
-            shownId = bi
-        } else if (bi != shownId) {
-            // only switch when another image is clearly closer, for several frames in a row
-            if (adj[bi] < SWITCH_MARGIN * adj[shownId]) {
-                if (bi == pendingId) pendingCount++ else { pendingId = bi; pendingCount = 1 }
-                if (pendingCount >= HOLD_FRAMES) {
-                    shownId = bi
-                    pendingId = -1
-                    pendingCount = 0
-                }
-            } else {
-                pendingId = -1
-                pendingCount = 0
-            }
-        } else {
-            pendingId = -1
-            pendingCount = 0
-        }
-        val labels = d.labelsOf(shownId)
-        captionMain.text = if (labels.isEmpty()) "…" else labels.joinToString("\n")
-        captionSub.text = "#$shownId  d=%.2f  %s".format(adj[shownId], if (calibratedMode) "calibrated" else "raw")
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
@@ -353,26 +230,10 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        private const val HOLD_FRAMES = 6
-        private const val SWITCH_MARGIN = 0.85f
-
         private val GREEN = Color.parseColor("#2ECC71")
         private val AMBER = Color.parseColor("#F5A623")
         private val RED = Color.parseColor("#E5484D")
         private val GREY = Color.parseColor("#9A9AA5")
-
-        private val JOKES = listOf(
-            "Why can't you trust an atom?" to "Because they make up everything!",
-            "What do you call a fake noodle?" to "An impasta!",
-            "Why did the scarecrow win an award?" to "He was outstanding in his field!",
-            "What do you call cheese that isn't yours?" to "Nacho cheese!",
-            "Why don't skeletons fight each other?" to "They don't have the guts!",
-            "What's orange and sounds like a parrot?" to "A carrot!",
-            "Why did the math book look sad?" to "It had too many problems!",
-            "How does a penguin build its house?" to "Igloos it together!",
-            "What did the ocean say to the beach?" to "Nothing, it just waved!",
-            "Why did the bicycle fall over?" to "It was two tired!"
-        )
 
         /** label to MediaPipe blendshape name */
         private val SIGNALS = listOf(
