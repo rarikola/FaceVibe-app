@@ -19,6 +19,7 @@ class ExpressionDb(context: Context) {
     private val labelSets: List<List<String>>
     private val vecs: Array<FloatArray>
     private val mirrors: Array<FloatArray?>
+    private val scale: FloatArray   // per-image neighbourhood size (hub correction)
 
     init {
         val text = context.assets.open("expression_db.json").bufferedReader().use { it.readText() }
@@ -46,6 +47,22 @@ class ExpressionDb(context: Context) {
         vecs = vs.toTypedArray()
         mirrors = ms.toTypedArray()
         mean = FloatArray(n) { if (size > 0) sum[it] / size else 0f }
+
+        // Hub correction: how far is each image from its 5th nearest other image? Images in crowded
+        // regions get a small scale so they stop winning for everything; every image still counts once.
+        val sc = FloatArray(size)
+        for (i in 0 until size) {
+            val ds = FloatArray(size)
+            for (j in 0 until size) {
+                ds[j] = if (i == j) 9f else {
+                    val m = mirrors[j]
+                    sqrt(if (m != null) minOf(sq(vecs[i], vecs[j]), sq(vecs[i], m)) else sq(vecs[i], vecs[j]))
+                }
+            }
+            ds.sort()
+            sc[i] = sqrt(ds[minOf(4, size - 2).coerceAtLeast(0)].coerceAtLeast(0.05f))
+        }
+        scale = sc
     }
 
     private fun toFloats(a: org.json.JSONArray, n: Int) = FloatArray(n) { a.getDouble(it).toFloat() }
@@ -60,6 +77,15 @@ class ExpressionDb(context: Context) {
             s += d * d
         }
         return s
+    }
+
+    fun labelsOf(id: Int): List<String> = labelSets[id]
+
+    /** Distance from the live vector to every stored image (mirrored copy tried too), hub-corrected. */
+    fun adjusted(v: FloatArray): FloatArray = FloatArray(size) { i ->
+        val m = mirrors[i]
+        val a = sq(v, vecs[i])
+        sqrt(if (m != null) minOf(a, sq(v, m)) else a) / scale[i]
     }
 
     /** The k nearest stored images (each also tried mirrored), closest first. */

@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
     private var db: ExpressionDb? = null
     private var calibratedMode = false          // false = raw vector, true = baseline-shifted
     private var ema: FloatArray? = null
-    private var shownMatch: Match? = null
+    private var shownId = -1
     private var pendingId = -1
     private var pendingCount = 0
 
@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
         captionCard.setOnClickListener {
             calibratedMode = !calibratedMode
             ema = null
-            shownMatch = null
+            shownId = -1
             pendingId = -1
             pendingCount = 0
             captionSub.text = if (calibratedMode) "mode: calibrated" else "mode: raw"
@@ -201,7 +201,7 @@ class MainActivity : ComponentActivity() {
         if (!f.hasFace) {
             emotions.onNoFace()
             ema = null
-            shownMatch = null
+            shownId = -1
             setStatus("No face", GREY)
             diag.update(emptyList())
             return
@@ -261,19 +261,26 @@ class MainActivity : ComponentActivity() {
         if (prev == null) {
             s = v
         } else {
-            for (i in v.indices) prev[i] += 0.4f * (v[i] - prev[i])
+            for (i in v.indices) prev[i] += 0.25f * (v[i] - prev[i])
             s = prev
         }
         ema = s
 
-        val best = d.nearest(s, 1).firstOrNull() ?: return
-        val cur = shownMatch
-        if (cur == null) {
-            shownMatch = best
-        } else if (best.id != cur.id) {
-            if (best.id == pendingId) pendingCount++ else { pendingId = best.id; pendingCount = 1 }
-            if (pendingCount >= HOLD_FRAMES) {
-                shownMatch = best
+        val adj = d.adjusted(s)
+        var bi = 0
+        for (i in adj.indices) if (adj[i] < adj[bi]) bi = i
+        if (shownId < 0) {
+            shownId = bi
+        } else if (bi != shownId) {
+            // only switch when another image is clearly closer, for several frames in a row
+            if (adj[bi] < SWITCH_MARGIN * adj[shownId]) {
+                if (bi == pendingId) pendingCount++ else { pendingId = bi; pendingCount = 1 }
+                if (pendingCount >= HOLD_FRAMES) {
+                    shownId = bi
+                    pendingId = -1
+                    pendingCount = 0
+                }
+            } else {
                 pendingId = -1
                 pendingCount = 0
             }
@@ -281,11 +288,9 @@ class MainActivity : ComponentActivity() {
             pendingId = -1
             pendingCount = 0
         }
-        val m = shownMatch ?: return
-        captionMain.text = m.labels.firstOrNull() ?: "…"
-        val others = m.labels.drop(1).joinToString(" · ")
-        val tail = "#${m.id}  d=%.2f  %s".format(best.dist, if (calibratedMode) "calibrated" else "raw")
-        captionSub.text = if (others.isEmpty()) tail else "$others\n$tail"
+        val labels = d.labelsOf(shownId)
+        captionMain.text = if (labels.isEmpty()) "…" else labels.joinToString("\n")
+        captionSub.text = "#$shownId  d=%.2f  %s".format(adj[shownId], if (calibratedMode) "calibrated" else "raw")
     }
 
     override fun onDestroy() {
@@ -296,7 +301,8 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        private const val HOLD_FRAMES = 5
+        private const val HOLD_FRAMES = 6
+        private const val SWITCH_MARGIN = 0.85f
 
         private val GREEN = Color.parseColor("#2ECC71")
         private val AMBER = Color.parseColor("#F5A623")
