@@ -1,42 +1,28 @@
 [
  {
-  "category": "neutral",
-  "emojis": [
-   "😐",
-   "😑"
+  "category": "neutral face",
+  "members": [
+   {
+    "emoji": "😐",
+    "reactions": [
+     "Okay… I'm listening.",
+     "Well… there it is."
+    ]
+   }
   ],
-  "label1": "Neutral / calm",
-  "label2": "Nothing to see here.",
   "t": {}
  },
  {
-  "category": "slight smile",
-  "emojis": [
-   "🙂",
-   "😊"
-  ],
-  "label1": "Content / mild pleasure",
-  "label2": "Yeah, that's nice.",
-  "t": {
-   "smile": [
-    0.35,
-    2
-   ],
-   "cheekSq": [
-    0.1,
-    1
-   ]
-  }
- },
- {
   "category": "grinning face",
-  "emojis": [
-   "😀",
-   "😃",
-   "😄"
+  "members": [
+   {
+    "emoji": "😀",
+    "reactions": [
+     "Hey, this is great!",
+     "Now that's what I'm talking about!"
+    ]
+   }
   ],
-  "label1": "Joy / cheerful excitement",
-  "label2": "Hey, this is great!",
   "t": {
    "smile": [
     0.7,
@@ -57,12 +43,16 @@
   }
  },
  {
-  "category": "grinning with teeth",
-  "emojis": [
-   "😁"
+  "category": "beaming face",
+  "members": [
+   {
+    "emoji": "😁",
+    "reactions": [
+     "Oh, this is GOOD!",
+     "Ha! I knew it!"
+    ]
+   }
   ],
-  "label1": "Beaming / proud grin",
-  "label2": "Look at that!",
   "t": {
    "smile": [
     0.65,
@@ -83,40 +73,45 @@
   }
  },
  {
-  "category": "laughing",
-  "emojis": [
-   "😆",
-   "😂",
-   "🤣"
+  "category": "slightly smiling face",
+  "members": [
+   {
+    "emoji": "🙂",
+    "reactions": [
+     "Well, that's nice.",
+     "Okay, I can live with that."
+    ]
+   },
+   {
+    "emoji": "😊",
+    "reactions": [
+     "Aww, that's so sweet!",
+     "You just made my day."
+    ]
+   }
   ],
-  "label1": "Hearty laughter / hilarity",
-  "label2": "Oh, that's too much!",
   "t": {
    "smile": [
-    0.8,
-    2
-   ],
-   "squint": [
-    0.6,
-    2.5
-   ],
-   "jaw": [
-    0.45,
+    0.35,
     2
    ],
    "cheekSq": [
-    0.6,
-    1.5
+    0.1,
+    1
    ]
   }
  },
  {
-  "category": "winking",
-  "emojis": [
-   "😉"
+  "category": "winking face",
+  "members": [
+   {
+    "emoji": "😉",
+    "reactions": [
+     "You didn't hear that from me!",
+     "Hey, just between us…"
+    ]
+   }
   ],
-  "label1": "Playful / knowing wink",
-  "label2": "Just between us.",
   "t": {
    "smile": [
     0.45,
@@ -133,14 +128,23 @@
   }
  },
  {
-  "category": "tongue out",
-  "emojis": [
-   "😛",
-   "😜",
-   "🤪"
+  "category": "face with tongue",
+  "members": [
+   {
+    "emoji": "😛",
+    "reactions": [
+     "Bleh! Just kidding!",
+     "Ha! Gotcha!"
+    ]
+   },
+   {
+    "emoji": "😋",
+    "reactions": [
+     "Mmm… now that's delicious!",
+     "Oh, I could eat this all day!"
+    ]
+   }
   ],
-  "label1": "Cheeky / silly",
-  "label2": "Nyah!",
   "t": {
    "tongue": [
     0.6,
@@ -157,66 +161,98 @@
   }
  },
  {
-  "category": "surprised",
-  "emojis": [
-   "😮",
-   "😯"
+  "category": "winking face with tongue",
+  "members": [
+   {
+    "emoji": "😜",
+    "reactions": [
+     "Oh, you wish!",
+     "Don't tempt me!"
+    ]
+   }
   ],
-  "label1": "Surprise / mild shock",
-  "label2": "Oh! Didn't see that coming.",
   "t": {
-   "jaw": [
-    0.35,
+   "tongue": [
+    0.5,
+    3
+   ],
+   "blinkAsym": [
+    0.5,
     2.5
    ],
-   "browInUp": [
+   "smile": [
     0.35,
-    1.5
-   ],
-   "browOutUp": [
-    0.3,
     1
-   ],
-   "wide": [
-    0.3,
-    1.5
    ]
   }
  },
  {
-  "category": "astonished",
-  "emojis": [
-   "😲",
-   "😳"
+  "category": "face with hand over mouth",
+  "members": [
+   {
+    "emoji": "🤭",
+    "reactions": [
+     "Oops… did I just say that?",
+     "Hehe… I shouldn't laugh!"
+    ]
+   }
   ],
-  "label1": "Astonishment / disbelief",
-  "label2": "Wait, what?!",
   "t": {
-   "jaw": [
-    0.65,
-    2.5
-   ],
-   "browInUp": [
-    0.6,
+   "smile": [
+    0.5,
     2
    ],
-   "browOutUp": [
-    0.5,
+   "squint": [
+    0.4,
+    2
+   ],
+   "cheekSq": [
+    0.4,
     1.5
    ],
-   "wide": [
-    0.6,
-    2.5
+   "press": [
+    0.2,
+    1
    ]
   }
  },
  {
-  "category": "thinking",
-  "emojis": [
-   "🤔"
+  "category": "shushing face",
+  "members": [
+   {
+    "emoji": "🤫",
+    "reactions": [
+     "Shh… not a word.",
+     "Keep this between us."
+    ]
+   }
   ],
-  "label1": "Thinking / pondering",
-  "label2": "Hmm, let me think.",
+  "t": {
+   "pucker": [
+    0.35,
+    3
+   ],
+   "press": [
+    0.3,
+    1.5
+   ],
+   "funnel": [
+    0.2,
+    1
+   ]
+  }
+ },
+ {
+  "category": "thinking face",
+  "members": [
+   {
+    "emoji": "🤔",
+    "reactions": [
+     "Hmm… let me think about that.",
+     "Wait… what am I missing here?"
+    ]
+   }
+  ],
   "t": {
    "browAsym": [
     0.4,
@@ -237,13 +273,16 @@
   }
  },
  {
-  "category": "raised eyebrow",
-  "emojis": [
-   "🤨",
-   "🧐"
+  "category": "face with raised eyebrow",
+  "members": [
+   {
+    "emoji": "🤨",
+    "reactions": [
+     "You sure about that?",
+     "Yeah… something doesn't add up."
+    ]
+   }
   ],
-  "label1": "Skepticism / raised brow",
-  "label2": "Really? Are you sure?",
   "t": {
    "browAsym": [
     0.5,
@@ -256,60 +295,16 @@
   }
  },
  {
-  "category": "unamused",
-  "emojis": [
-   "😒"
+  "category": "smirking face",
+  "members": [
+   {
+    "emoji": "😏",
+    "reactions": [
+     "Yeah… nice try.",
+     "Oh, I know exactly what you're up to."
+    ]
+   }
   ],
-  "label1": "Unimpressed / sceptical",
-  "label2": "Yeah, sure, whatever.",
-  "t": {
-   "frown": [
-    0.25,
-    2
-   ],
-   "squint": [
-    0.3,
-    1.5
-   ],
-   "browDown": [
-    0.25,
-    1
-   ],
-   "press": [
-    0.2,
-    1
-   ]
-  }
- },
- {
-  "category": "eye roll",
-  "emojis": [
-   "🙄"
-  ],
-  "label1": "Exasperated / eye roll",
-  "label2": "Oh, come on.",
-  "t": {
-   "lookUp": [
-    0.7,
-    3.5
-   ],
-   "blink": [
-    0.2,
-    1
-   ],
-   "browOutUp": [
-    0.2,
-    1
-   ]
-  }
- },
- {
-  "category": "smirking",
-  "emojis": [
-   "😏"
-  ],
-  "label1": "Smug / sly confidence",
-  "label2": "Told you so.",
   "t": {
    "smileAsym": [
     0.35,
@@ -330,12 +325,72 @@
   }
  },
  {
-  "category": "grimacing",
-  "emojis": [
-   "😬"
+  "category": "unamused face",
+  "members": [
+   {
+    "emoji": "😒",
+    "reactions": [
+     "Yeahhh… I don't think so.",
+     "Seriously? That's your best offer?"
+    ]
+   }
   ],
-  "label1": "Awkward / nervous grimace",
-  "label2": "Uh... that's awkward.",
+  "t": {
+   "frown": [
+    0.25,
+    2
+   ],
+   "squint": [
+    0.3,
+    1.5
+   ],
+   "browDown": [
+    0.25,
+    1
+   ],
+   "press": [
+    0.2,
+    1
+   ]
+  }
+ },
+ {
+  "category": "face with rolling eyes",
+  "members": [
+   {
+    "emoji": "🙄",
+    "reactions": [
+     "Oh, come on… give me a break!",
+     "Here we go again…"
+    ]
+   }
+  ],
+  "t": {
+   "lookUp": [
+    0.7,
+    3.5
+   ],
+   "blink": [
+    0.2,
+    1
+   ],
+   "browOutUp": [
+    0.2,
+    1
+   ]
+  }
+ },
+ {
+  "category": "grimacing face",
+  "members": [
+   {
+    "emoji": "😬",
+    "reactions": [
+     "Yikes… that was awkward.",
+     "Uh… let's pretend that didn't happen."
+    ]
+   }
+  ],
   "t": {
    "stretch": [
     0.5,
@@ -356,17 +411,268 @@
   }
  },
  {
-  "category": "sad",
-  "emojis": [
-   "😢",
-   "😞",
-   "😔"
+  "category": "face exhaling",
+  "members": [
+   {
+    "emoji": "😮‍💨",
+    "reactions": [
+     "Phew… glad that's over.",
+     "Okay… deep breath."
+    ]
+   }
   ],
-  "label1": "Sadness / quiet hurt",
-  "label2": "That's so sad.",
+  "t": {
+   "pucker": [
+    0.45,
+    2.5
+   ],
+   "cheekPuff": [
+    0.4,
+    2.5
+   ],
+   "blink": [
+    0.45,
+    2
+   ],
+   "funnel": [
+    0.3,
+    1.5
+   ],
+   "jaw": [
+    0.15,
+    1
+   ]
+  }
+ },
+ {
+  "category": "slightly frowning face",
+  "members": [
+   {
+    "emoji": "🙁",
+    "reactions": [
+     "Aww… that's a shame.",
+     "Oh… I was hoping for better."
+    ]
+   },
+   {
+    "emoji": "😔",
+    "reactions": [
+     "I wish things had turned out differently.",
+     "Yeah… I've got a lot on my mind."
+    ]
+   },
+   {
+    "emoji": "😞",
+    "reactions": [
+     "Wow… I thought I knew you.",
+     "I really expected better."
+    ]
+   }
+  ],
   "t": {
    "frown": [
+    0.3,
+    2
+   ],
+   "browInUp": [
+    0.3,
+    2
+   ],
+   "lookDown": [
+    0.3,
+    2
+   ],
+   "blink": [
+    0.15,
+    1
+   ]
+  }
+ },
+ {
+  "category": "face with bags under eyes",
+  "members": [
+   {
+    "emoji": "🫩",
+    "reactions": [
+     "I am running on fumes.",
+     "Can we please call it a day?"
+    ]
+   }
+  ],
+  "t": {
+   "blink": [
     0.45,
+    2.5
+   ],
+   "squint": [
+    0.3,
+    1.5
+   ],
+   "lookDown": [
+    0.25,
+    1.5
+   ],
+   "frown": [
+    0.1,
+    0.5
+   ]
+  }
+ },
+ {
+  "category": "woozy face",
+  "members": [
+   {
+    "emoji": "🥴",
+    "reactions": [
+     "Whoa… everything's spinning.",
+     "I think I need to sit down."
+    ]
+   }
+  ],
+  "t": {
+   "blinkAsym": [
+    0.4,
+    2.5
+   ],
+   "smileAsym": [
+    0.3,
+    2
+   ],
+   "lookUp": [
+    0.3,
+    1.5
+   ],
+   "jaw": [
+    0.15,
+    1
+   ]
+  }
+ },
+ {
+  "category": "smiling face with sunglasses",
+  "members": [
+   {
+    "emoji": "😎",
+    "reactions": [
+     "Relax, I've got this.",
+     "Too cool to worry about it."
+    ]
+   }
+  ],
+  "t": {
+   "smile": [
+    0.4,
+    2
+   ],
+   "smileAsym": [
+    0.15,
+    1
+   ],
+   "browDown": [
+    0.15,
+    1
+   ],
+   "squint": [
+    0.25,
+    1
+   ]
+  }
+ },
+ {
+  "category": "confused face",
+  "members": [
+   {
+    "emoji": "😕",
+    "reactions": [
+     "Wait… I don't understand.",
+     "Huh? How does that make sense?"
+    ]
+   },
+   {
+    "emoji": "🫤",
+    "reactions": [
+     "Meh… I'm not convinced.",
+     "Well… could go either way."
+    ]
+   }
+  ],
+  "t": {
+   "browAsym": [
+    0.3,
+    2
+   ],
+   "frown": [
+    0.25,
+    2
+   ],
+   "smileAsym": [
+    0.2,
+    1.5
+   ],
+   "press": [
+    0.25,
+    1.5
+   ]
+  }
+ },
+ {
+  "category": "worried face",
+  "members": [
+   {
+    "emoji": "😟",
+    "reactions": [
+     "Hmm… something's not right.",
+     "Please tell me everything's okay…"
+    ]
+   },
+   {
+    "emoji": "🫣",
+    "reactions": [
+     "I can't look… but I have to!",
+     "Is it over yet?"
+    ]
+   }
+  ],
+  "t": {
+   "browInUp": [
+    0.5,
+    3
+   ],
+   "frown": [
+    0.3,
+    1.5
+   ],
+   "wide": [
+    0.25,
+    1.5
+   ],
+   "press": [
+    0.15,
+    1
+   ]
+  }
+ },
+ {
+  "category": "frowning face",
+  "members": [
+   {
+    "emoji": "☹",
+    "reactions": [
+     "Oh no… that's really sad.",
+     "I hate that it came to this."
+    ]
+   },
+   {
+    "emoji": "😢",
+    "reactions": [
+     "Oh… I'm so sorry.",
+     "Why did it have to end this way?"
+    ]
+   }
+  ],
+  "t": {
+   "frown": [
+    0.5,
     2.5
    ],
    "browInUp": [
@@ -376,46 +682,105 @@
    "press": [
     0.2,
     1
-   ]
-  }
- },
- {
-  "category": "sobbing",
-  "emojis": [
-   "😭"
-  ],
-  "label1": "Heartbreak / sobbing",
-  "label2": "I can't take it.",
-  "t": {
-   "frown": [
-    0.6,
-    2
-   ],
-   "browInUp": [
-    0.65,
-    2
-   ],
-   "jaw": [
-    0.4,
-    2
    ],
    "squint": [
-    0.5,
-    2
-   ],
-   "stretch": [
     0.2,
     1
    ]
   }
  },
  {
-  "category": "pleading",
-  "emojis": [
-   "🥺"
+  "category": "face with open mouth",
+  "members": [
+   {
+    "emoji": "😮",
+    "reactions": [
+     "Oh! I wasn't expecting that.",
+     "Wait… what just happened?"
+    ]
+   },
+   {
+    "emoji": "😯",
+    "reactions": [
+     "Oh… I see.",
+     "Well, that's unexpected…"
+    ]
+   }
   ],
-  "label1": "Pleading / tender plea",
-  "label2": "Please? Pretty please?",
+  "t": {
+   "jaw": [
+    0.35,
+    2.5
+   ],
+   "browInUp": [
+    0.35,
+    1.5
+   ],
+   "browOutUp": [
+    0.3,
+    1
+   ],
+   "wide": [
+    0.3,
+    1.5
+   ]
+  }
+ },
+ {
+  "category": "astonished face",
+  "members": [
+   {
+    "emoji": "😲",
+    "reactions": [
+     "Whoa… no way!",
+     "You have GOT to be kidding me!"
+    ]
+   },
+   {
+    "emoji": "😳",
+    "reactions": [
+     "Oh! Everybody saw that, didn't they?",
+     "Uh… this is embarrassing."
+    ]
+   },
+   {
+    "emoji": "🫢",
+    "reactions": [
+     "Oh my gosh… did that really happen?",
+     "Wait—you did WHAT?!"
+    ]
+   }
+  ],
+  "t": {
+   "jaw": [
+    0.65,
+    2.5
+   ],
+   "browInUp": [
+    0.6,
+    2
+   ],
+   "browOutUp": [
+    0.5,
+    1.5
+   ],
+   "wide": [
+    0.6,
+    2.5
+   ]
+  }
+ },
+ {
+  "category": "pleading face",
+  "members": [
+   {
+    "emoji": "🥺",
+    "reactions": [
+     "Please… just this once?",
+     "Come on… pretty please?"
+    ]
+   }
+  ],
   "t": {
    "browInUp": [
     0.7,
@@ -436,104 +801,117 @@
   }
  },
  {
-  "category": "angry",
-  "emojis": [
-   "😠"
+  "category": "face holding back tears",
+  "members": [
+   {
+    "emoji": "🥹",
+    "reactions": [
+     "Oh, you son of a gun!",
+     "Aww… you're gonna make me cry!"
+    ]
+   }
   ],
-  "label1": "Anger / stern warning",
-  "label2": "Don't push it.",
   "t": {
-   "browDown": [
+   "browInUp": [
     0.6,
     3
    ],
-   "squint": [
-    0.35,
-    1.5
-   ],
-   "press": [
-    0.35,
+   "smile": [
+    0.25,
     2
    ],
-   "frown": [
-    0.2,
+   "press": [
+    0.25,
+    1.5
+   ],
+   "wide": [
+    0.15,
     1
    ]
   }
  },
  {
-  "category": "furious",
-  "emojis": [
-   "😡",
-   "🤬"
+  "category": "frowning face with open mouth",
+  "members": [
+   {
+    "emoji": "😦",
+    "reactions": [
+     "Oh no… what happened?",
+     "Wait… is everyone okay?"
+    ]
+   },
+   {
+    "emoji": "😧",
+    "reactions": [
+     "Why would you do that?",
+     "Oh, that's awful…"
+    ]
+   }
   ],
-  "label1": "Fury / rage",
-  "label2": "That's it. I'm done.",
   "t": {
-   "browDown": [
-    0.85,
-    3
+   "frown": [
+    0.4,
+    2
+   ],
+   "jaw": [
+    0.3,
+    2
+   ],
+   "browInUp": [
+    0.4,
+    2
    ],
    "squint": [
-    0.5,
-    1.5
+    0.15,
+    1
+   ]
+  }
+ },
+ {
+  "category": "fearful face",
+  "members": [
+   {
+    "emoji": "😨",
+    "reactions": [
+     "Oh God… no.",
+     "Please tell me it isn't true…"
+    ]
+   }
+  ],
+  "t": {
+   "wide": [
+    0.6,
+    2.5
    ],
-   "press": [
-    0.4,
-    1.5
+   "browInUp": [
+    0.6,
+    2.5
    ],
-   "sneer": [
-    0.35,
-    1.5
+   "stretch": [
+    0.45,
+    2
+   ],
+   "frown": [
+    0.15,
+    1
    ],
    "jaw": [
     0.25,
     1
-   ],
-   "upLip": [
-    0.3,
-    1
    ]
   }
  },
  {
-  "category": "disgusted",
-  "emojis": [
-   "🤢",
-   "🤮"
+  "category": "face screaming in fear",
+  "members": [
+   {
+    "emoji": "😱",
+    "reactions": [
+     "AAAAH! Get me out of here!",
+     "No, no, NO!"
+    ]
+   }
   ],
-  "label1": "Disgust / revulsion",
-  "label2": "Ew! That's gross!",
-  "t": {
-   "sneer": [
-    0.6,
-    3
-   ],
-   "upLip": [
-    0.5,
-    2
-   ],
-   "frown": [
-    0.3,
-    1.5
-   ],
-   "browDown": [
-    0.3,
-    1
-   ],
-   "squint": [
-    0.3,
-    1
-   ]
-  }
- },
- {
-  "category": "screaming in fear",
-  "emojis": [
-   "😱"
-  ],
-  "label1": "Terror / screaming shock",
-  "label2": "Oh my god!",
   "t": {
    "jaw": [
     0.8,
@@ -558,138 +936,16 @@
   }
  },
  {
-  "category": "fearful",
-  "emojis": [
-   "😨",
-   "😰"
+  "category": "weary face",
+  "members": [
+   {
+    "emoji": "😩",
+    "reactions": [
+     "Ugh… I can't take this anymore!",
+     "Please… I've had enough."
+    ]
+   }
   ],
-  "label1": "Fear / dread",
-  "label2": "Please tell me it's not true.",
-  "t": {
-   "wide": [
-    0.6,
-    2.5
-   ],
-   "browInUp": [
-    0.6,
-    2.5
-   ],
-   "stretch": [
-    0.45,
-    2
-   ],
-   "frown": [
-    0.15,
-    1
-   ],
-   "jaw": [
-    0.25,
-    1
-   ]
-  }
- },
- {
-  "category": "sleeping",
-  "emojis": [
-   "😴"
-  ],
-  "label1": "Sleepy / out cold",
-  "label2": "Zzz...",
-  "t": {
-   "blink": [
-    0.85,
-    3.5
-   ],
-   "jaw": [
-    0.1,
-    0.5
-   ]
-  }
- },
- {
-  "category": "yawning",
-  "emojis": [
-   "🥱"
-  ],
-  "label1": "Tired / yawning",
-  "label2": "So... tired.",
-  "t": {
-   "jaw": [
-    0.85,
-    3
-   ],
-   "blink": [
-    0.6,
-    2
-   ],
-   "squint": [
-    0.3,
-    1
-   ],
-   "stretch": [
-    0.15,
-    1
-   ],
-   "browInUp": [
-    0.2,
-    1
-   ]
-  }
- },
- {
-  "category": "blowing a kiss",
-  "emojis": [
-   "😘",
-   "😗",
-   "😙"
-  ],
-  "label1": "Affection / blowing a kiss",
-  "label2": "Mwah!",
-  "t": {
-   "pucker": [
-    0.6,
-    3.5
-   ],
-   "blinkAsym": [
-    0.25,
-    1
-   ],
-   "funnel": [
-    0.2,
-    1
-   ]
-  }
- },
- {
-  "category": "relieved",
-  "emojis": [
-   "😌"
-  ],
-  "label1": "Relief / peaceful",
-  "label2": "Ahh, finally.",
-  "t": {
-   "blink": [
-    0.7,
-    3
-   ],
-   "smile": [
-    0.3,
-    2
-   ],
-   "browInUp": [
-    0.1,
-    0.5
-   ]
-  }
- },
- {
-  "category": "weary",
-  "emojis": [
-   "😩",
-   "😫"
-  ],
-  "label1": "Weary / fed up",
-  "label2": "Why does this always happen to me?",
   "t": {
    "frown": [
     0.5,
@@ -709,6 +965,108 @@
    ],
    "blink": [
     0.3,
+    1
+   ]
+  }
+ },
+ {
+  "category": "yawning face",
+  "members": [
+   {
+    "emoji": "🥱",
+    "reactions": [
+     "I can't keep my eyes open.",
+     "Just five more minutes…"
+    ]
+   }
+  ],
+  "t": {
+   "jaw": [
+    0.85,
+    3
+   ],
+   "blink": [
+    0.6,
+    2
+   ],
+   "squint": [
+    0.3,
+    1
+   ],
+   "stretch": [
+    0.15,
+    1
+   ],
+   "browInUp": [
+    0.2,
+    1
+   ]
+  }
+ },
+ {
+  "category": "enraged face",
+  "members": [
+   {
+    "emoji": "😡",
+    "reactions": [
+     "Don't you DARE!",
+     "I've had ENOUGH of this!"
+    ]
+   }
+  ],
+  "t": {
+   "browDown": [
+    0.85,
+    3
+   ],
+   "squint": [
+    0.5,
+    1.5
+   ],
+   "press": [
+    0.4,
+    1.5
+   ],
+   "sneer": [
+    0.35,
+    1.5
+   ],
+   "jaw": [
+    0.25,
+    1
+   ],
+   "upLip": [
+    0.3,
+    1
+   ]
+  }
+ },
+ {
+  "category": "angry face",
+  "members": [
+   {
+    "emoji": "😠",
+    "reactions": [
+     "Hey! What's the big idea?",
+     "Don't push it."
+    ]
+   }
+  ],
+  "t": {
+   "browDown": [
+    0.6,
+    3
+   ],
+   "squint": [
+    0.35,
+    1.5
+   ],
+   "press": [
+    0.35,
+    2
+   ],
+   "frown": [
+    0.2,
     1
    ]
   }

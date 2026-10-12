@@ -5,14 +5,14 @@ import org.json.JSONObject
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/** A group of similar emojis sharing one face template and one pair of labels. */
+class Member(val emoji: String, val reactions: List<String>)
+
+/** A group of similar-looking emojis sharing one face template. */
 class EmojiTemplate(
-    val category: String,      // internal name only, never shown
-    val emojis: List<String>,  // one of these is shown, picked at random
-    val label1: String,
-    val label2: String,
-    val targets: FloatArray,   // per feature
-    val weights: FloatArray    // per feature (square-rooted, ready to use)
+    val category: String,
+    val members: List<Member>,
+    val targets: FloatArray,
+    val weights: FloatArray
 )
 
 /**
@@ -40,9 +40,13 @@ class EmojiTemplates(context: Context) {
                     w[idx] = sqrt(pair.getDouble(1)).toFloat()
                 }
             }
-            val ea = o.getJSONArray("emojis")
-            val em = List(ea.length()) { ea.getString(it) }
-            list.add(EmojiTemplate(o.getString("category"), em, o.getString("label1"), o.getString("label2"), tg, w))
+            val ma = o.getJSONArray("members")
+            val mem = List(ma.length()) {
+                val mo = ma.getJSONObject(it)
+                val ra = mo.getJSONArray("reactions")
+                Member(mo.getString("emoji"), List(ra.length()) { j -> ra.getString(j) })
+            }
+            list.add(EmojiTemplate(o.getString("category"), mem, tg, w))
         }
         templates = list
         neutralWeights = FloatArray(FEATURES.size) { sqrt(DEFAULT_WEIGHT) }
@@ -75,7 +79,9 @@ class EmojiTemplates(context: Context) {
             a("mouthLowerDownLeft", "mouthLowerDownRight"),                           // lowDown
             a("cheekSquintLeft", "cheekSquintRight"),                                 // cheekSq
             a("eyeLookUpLeft", "eyeLookUpRight"),                                     // lookUp
-            g("tongueOut")                                                            // tongue
+            g("tongueOut"),                                                           // tongue
+            a("eyeLookDownLeft", "eyeLookDownRight"),                                 // lookDown
+            g("cheekPuff")                                                            // cheekPuff
         )
     }
 
@@ -111,7 +117,7 @@ class EmojiTemplates(context: Context) {
         val FEATURES = listOf(
             "smile", "smileAsym", "frown", "browInUp", "browOutUp", "browDown", "browAsym", "wide",
             "squint", "blink", "blinkAsym", "jaw", "press", "stretch", "pucker", "funnel", "sneer",
-            "upLip", "lowDown", "cheekSq", "lookUp", "tongue"
+            "upLip", "lowDown", "cheekSq", "lookUp", "tongue", "lookDown", "cheekPuff"
         )
         const val DEFAULT_WEIGHT = 0.4f
         const val NEUTRAL_ENERGY = 0.1f

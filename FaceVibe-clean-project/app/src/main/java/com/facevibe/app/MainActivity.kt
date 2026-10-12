@@ -49,6 +49,19 @@ class MainActivity : ComponentActivity() {
     private var pendCount = 0
     private var lastSwitch = 0L
     private var shownEmoji = ""
+    private var shownReaction = ""
+
+    /** Least-shown emoji of the group (random tiebreak); its reactions rotate each time it is shown. */
+    private fun pickMember(g: EmojiTemplate) {
+        val prefs = getSharedPreferences("f2e", MODE_PRIVATE)
+        val counts = g.members.map { prefs.getInt("n_" + it.emoji, 0) }
+        val min = counts.min()
+        val i = counts.indices.filter { counts[it] == min }.random()
+        val mem = g.members[i]
+        shownEmoji = mem.emoji
+        shownReaction = mem.reactions[counts[i] % mem.reactions.size]
+        prefs.edit().putInt("n_" + mem.emoji, counts[i] + 1).apply()
+    }
 
     private var frames = 0
     private var fps = 0
@@ -217,7 +230,7 @@ class MainActivity : ComponentActivity() {
                 if (target == pendGroup) pendCount++ else { pendGroup = target; pendCount = 1 }
                 if (pendCount >= HOLD_FRAMES && now - lastSwitch >= MIN_DWELL_MS) {
                     curGroup = target
-                    shownEmoji = t.templates[target].emojis.random()
+                    pickMember(t.templates[target])
                     lastSwitch = now
                     pendGroup = -1
                     pendCount = 0
@@ -231,10 +244,10 @@ class MainActivity : ComponentActivity() {
             pendCount = 0
         }
         val m = t.templates[curGroup]
-        if (shownEmoji.isEmpty()) shownEmoji = m.emojis.random()
+        if (shownEmoji.isEmpty()) pickMember(m)
         emoji.text = shownEmoji
         emojiLabels.visibility = View.VISIBLE
-        emojiLabels.text = m.label1 + "\n" + m.label2
+        emojiLabels.text = shownReaction
     }
 
     override fun onDestroy() {
