@@ -166,15 +166,12 @@ class MainActivity : ComponentActivity() {
         for (a in ids.indices) for (b in a + 1 until ids.size)
             pairs.add(Triple(protos.dist(means[ids[a]]!!, means[ids[b]]!!), ids[a], ids[b]))
         pairs.sortBy { it.first }
-        val msg = pairs.take(6).joinToString("
-") {
+        val msg = pairs.take(6).joinToString("\n") {
             "${exprs.byId(it.second)?.name}  ≈  ${exprs.byId(it.third)?.name}"
         }
         AlertDialog.Builder(this)
             .setTitle("Easily mixed up")
-            .setMessage(msg + "
-
-Tip: make these faces a bit more different from each other, then Teach again.")
+            .setMessage(msg + "\n\nTip: make these faces a bit more different from each other, then Teach again.")
             .setPositiveButton("OK", null)
             .show()
     }

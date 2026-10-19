@@ -14,7 +14,7 @@ class Expr(
     val reactions: List<String>
 )
 
-/** The 37 drawn expressions (assets/expressions.json + assets/faces/*.png). */
+/** The 37 drawn expressions (assets/expressions.json + assets/faces folder). */
 class Expressions(private val ctx: Context) {
     val list: List<Expr>
     private val cache = HashMap<Int, Bitmap>()
