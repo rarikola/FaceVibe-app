@@ -17,7 +17,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.7
-      - run: gradle assembleDebug --no-daemon
+      - run: |
+          gradle assembleDebug --no-daemon 2>&1 | tee /tmp/b.log; s=${PIPESTATUS[0]}
+          grep -E "^e: |error:|AAPT|What went wrong" -A2 /tmp/b.log | head -30 | while IFS= read -r l; do echo "::error::$l"; done
+          exit $s
       - uses: actions/upload-artifact@v4
         with:
           name: FaceVibe-debug-apk
