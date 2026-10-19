@@ -208,8 +208,8 @@ class MainActivity : ComponentActivity() {
         if (el >= REC_MS) {
             val a = tAcc
             if (a != null && tN >= 10) {
-                for (i in a.indices) a[i] /= tN
-                protos.add(e.id, a, !tAdd)
+                val n = tN
+                protos.add(e.id, FloatArray(a.size) { a[it] / n }, !tAdd)
                 gotoExpr(tIdx + 1)
             } else startReady()
         }
