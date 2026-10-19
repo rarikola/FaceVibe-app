@@ -9,6 +9,10 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.View
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.ProgressBar
+import android.app.AlertDialog
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -63,6 +67,157 @@ class MainActivity : ComponentActivity() {
         prefs.edit().putInt("n_" + mem.emoji, counts[i] + 1).apply()
     }
 
+    // ---- Teach-me ----
+    private lateinit var exprs: Expressions
+    private lateinit var protos: Prototypes
+    private lateinit var emojiImg: ImageView
+    private lateinit var teachPanel: View
+    private lateinit var tImg: ImageView
+    private lateinit var tChar: TextView
+    private lateinit var tName: TextView
+    private lateinit var tDesc: TextView
+    private lateinit var tCount: TextView
+    private lateinit var tStatus: TextView
+    private lateinit var tProgress: ProgressBar
+    private lateinit var bPause: Button
+    private var teachOn = false
+    private var tIdx = 0
+    private var tPhase = 0            // 0 paused, 1 get ready, 2 recording
+    private var tStart = 0L
+    private var tAdd = false
+    private var tAcc: FloatArray? = null
+    private var tN = 0
+    private var curId = -1
+    private val votes = IntArray(VOTE_N) { -1 }
+    private var voteI = 0
+    private var neutralId = 35
+
+    private fun showExpr(e: Expr, img: ImageView, ch: TextView) {
+        val bmp = exprs.bitmap(e)
+        if (bmp != null) { img.setImageBitmap(bmp); img.visibility = View.VISIBLE; ch.text = "" }
+        else { img.visibility = View.GONE; ch.text = e.ch ?: "🙂" }
+    }
+
+    private fun switchTo(id: Int) {
+        val e = exprs.byId(id) ?: return
+        val prefs = getSharedPreferences("f2e", MODE_PRIVATE)
+        val n = prefs.getInt("n_" + id, 0)
+        prefs.edit().putInt("n_" + id, n + 1).apply()
+        curId = id
+        showExpr(e, emojiImg, emoji)
+        emojiLabels.visibility = View.VISIBLE
+        emojiLabels.text = e.reactions[n % e.reactions.size]
+    }
+
+    /** Nearest taught sample, majority vote over the last few frames: quick but steady. */
+    private fun updateTaught() {
+        val v = protos.vector(emotions.smoothed()) ?: return
+        votes[voteI] = protos.match(v, neutralId)
+        voteI = (voteI + 1) % VOTE_N
+        val top = votes.filter { it >= 0 }.groupingBy { it }.eachCount().maxByOrNull { it.value } ?: return
+        val now = SystemClock.uptimeMillis()
+        if (top.key != curId && top.value >= VOTE_NEED && (curId < 0 || now - lastSwitch >= TAUGHT_DWELL_MS)) {
+            switchTo(top.key)
+            lastSwitch = now
+        }
+    }
+
+    private fun openTeach() {
+        teachOn = true
+        teachPanel.visibility = View.VISIBLE
+        val done = protos.taughtIds()
+        tIdx = exprs.list.indexOfFirst { it.id !in done }.let { if (it < 0) 0 else it }
+        tAdd = false
+        startReady()
+        showTeachExpr()
+    }
+
+    private fun startReady() {
+        tPhase = 1; tStart = SystemClock.uptimeMillis(); tAcc = null; tN = 0
+        bPause.text = "Pause"
+        tProgress.progress = 0
+    }
+
+    private fun showTeachExpr() {
+        val e = exprs.list[tIdx]
+        showExpr(e, tImg, tChar)
+        tName.text = e.name
+        tDesc.text = e.desc
+        tCount.text = "${tIdx + 1} / ${exprs.list.size}   ·   taught: ${protos.taughtIds().size}" + if (tAdd) "   ·   extra sample" else ""
+    }
+
+    private fun gotoExpr(i: Int) {
+        if (i < 0) return
+        if (i >= exprs.list.size) { finishTeach(); return }
+        tIdx = i; tAdd = false
+        showTeachExpr()
+        startReady()
+    }
+
+    private fun finishTeach() {
+        teachOn = false
+        tPhase = 0
+        teachPanel.visibility = View.GONE
+        voteI = 0; votes.fill(-1); curId = -1
+        val means = protos.classMeans()
+        if (means.size < 2) return
+        val ids = means.keys.toList()
+        val pairs = ArrayList<Triple<Float, Int, Int>>()
+        for (a in ids.indices) for (b in a + 1 until ids.size)
+            pairs.add(Triple(protos.dist(means[ids[a]]!!, means[ids[b]]!!), ids[a], ids[b]))
+        pairs.sortBy { it.first }
+        val msg = pairs.take(6).joinToString("
+") {
+            "${exprs.byId(it.second)?.name}  ≈  ${exprs.byId(it.third)?.name}"
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Easily mixed up")
+            .setMessage(msg + "
+
+Tip: make these faces a bit more different from each other, then Teach again.")
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
+    private fun teachFrame(f: FaceFrame, calibrating: Boolean) {
+        val now = SystemClock.uptimeMillis()
+        if (tPhase == 0) { tStatus.text = "Paused"; return }
+        if (!f.hasFace || calibrating) {
+            tStart = now
+            tAcc = null; tN = 0
+            tProgress.progress = 0
+            tStatus.text = if (calibrating) "Hold a neutral face…" else "I can't see your face"
+            return
+        }
+        val e = exprs.list[tIdx]
+        val el = now - tStart
+        if (tPhase == 1) {
+            val left = READY_MS - el
+            tStatus.text = "Get ready… ${(left / 1000) + 1}"
+            tProgress.progress = 0
+            if (left <= 0) { tPhase = 2; tStart = now; tAcc = null; tN = 0 }
+            return
+        }
+        tStatus.text = "Hold: ${e.name}"
+        tProgress.progress = (el * 100 / REC_MS).toInt().coerceAtMost(100)
+        if (el >= SETTLE_MS) {
+            val v = protos.vector(emotions.smoothed())
+            if (v != null) {
+                val a = tAcc ?: FloatArray(v.size).also { tAcc = it }
+                for (i in v.indices) a[i] += v[i]
+                tN++
+            }
+        }
+        if (el >= REC_MS) {
+            val a = tAcc
+            if (a != null && tN >= 10) {
+                for (i in a.indices) a[i] /= tN
+                protos.add(e.id, a, !tAdd)
+                gotoExpr(tIdx + 1)
+            } else startReady()
+        }
+    }
+
     private var frames = 0
     private var fps = 0
     private var lastFpsTime = 0L
@@ -81,6 +236,28 @@ class MainActivity : ComponentActivity() {
         diag = findViewById(R.id.diag)
         emoji = findViewById(R.id.emoji)
         emojiLabels = findViewById(R.id.emojiLabels)
+        emojiImg = findViewById(R.id.emojiImg)
+        teachPanel = findViewById(R.id.teach)
+        tImg = findViewById(R.id.tImg); tChar = findViewById(R.id.tChar)
+        tName = findViewById(R.id.tName); tDesc = findViewById(R.id.tDesc)
+        tCount = findViewById(R.id.tCount); tStatus = findViewById(R.id.tStatus)
+        tProgress = findViewById(R.id.tProgress); bPause = findViewById(R.id.bPause)
+        exprs = Expressions(applicationContext)
+        protos = Prototypes(java.io.File(filesDir, "prototypes.json"))
+        neutralId = exprs.list.firstOrNull { it.name == "Poker face" }?.id ?: 35
+        findViewById<View>(R.id.teachBtn).setOnClickListener { openTeach() }
+        findViewById<View>(R.id.bBack).setOnClickListener { gotoExpr((tIdx - 1).coerceAtLeast(0)) }
+        findViewById<View>(R.id.bSkip).setOnClickListener { gotoExpr(tIdx + 1) }
+        findViewById<View>(R.id.bAdd).setOnClickListener { tAdd = true; showTeachExpr(); startReady() }
+        bPause.setOnClickListener {
+            if (tPhase == 0) { startReady() } else { tPhase = 0; bPause.text = "Start" }
+        }
+        findViewById<View>(R.id.bFinish).setOnClickListener { finishTeach() }
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (teachOn) finishTeach() else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
+            }
+        })
         try {
             tpl = EmojiTemplates(applicationContext)
         } catch (t: Throwable) {
@@ -164,6 +341,7 @@ class MainActivity : ComponentActivity() {
         if (!f.hasFace) {
             emotions.onNoFace()
             featEma = null
+            if (teachOn) teachFrame(f, false)
             setStatus("No face", GREY)
             diag.update(emptyList())
             return
@@ -172,12 +350,16 @@ class MainActivity : ComponentActivity() {
         val st = emotions.update(f.blend)
         if (st.calibrating) {
             emoji.text = "🙂"
+            emojiImg.visibility = View.GONE
             emojiLabels.visibility = View.GONE
             setStatus("Hold a neutral face… ${(st.calibrationProgress * 100).toInt()}%", AMBER)
         } else {
-            updateEmoji()
+            if (teachOn) { /* paused matching while teaching */ }
+            else if (protos.samples.isNotEmpty()) updateTaught()
+            else updateEmoji()
             setStatus("LIVE", GREEN)
         }
+        if (teachOn) teachFrame(f, st.calibrating)
 
         val rows = ArrayList<DiagView.Row>()
         fun g(k: String) = f.blend[k] ?: 0f
@@ -205,6 +387,7 @@ class MainActivity : ComponentActivity() {
     /** Emoji-group matcher on the calibrated, smoothed face. Switches slowly so it does not flicker. */
     private fun updateEmoji() {
         val t = tpl ?: return
+        emojiImg.visibility = View.GONE
         val raw = t.features(emotions.smoothed())
         val prev = featEma
         val x: FloatArray
@@ -261,6 +444,12 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val VOTE_N = 8
+        private const val VOTE_NEED = 5
+        private const val TAUGHT_DWELL_MS = 500L
+        private const val READY_MS = 2000L
+        private const val SETTLE_MS = 500L
+        private const val REC_MS = 3000L
         private const val FEATURE_ALPHA = 0.25f   // extra smoothing on the face pattern
         private const val HOLD_FRAMES = 8        // ~0.6 s of consistent evidence before switching
         private const val MIN_DWELL_MS = 700L     // never switch twice within this time

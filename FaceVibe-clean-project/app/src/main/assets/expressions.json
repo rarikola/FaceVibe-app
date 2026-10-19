@@ -1,0 +1,372 @@
+[
+ {
+  "id": 1,
+  "name": "Not bad",
+  "desc": "Mouth corners pulled down, chin pushed up, brows slightly raised, small nod",
+  "reactions": [
+   "Not bad.",
+   "Okay, I'm impressed."
+  ],
+  "key": "e01_not_bad"
+ },
+ {
+  "id": 2,
+  "name": "Skeptical",
+  "desc": "One brow raised, mouth pressed to one side",
+  "reactions": [
+   "Sure it is.",
+   "Doubt."
+  ],
+  "key": "e02_skeptical"
+ },
+ {
+  "id": 3,
+  "name": "Suspicious",
+  "desc": "Eyes narrowed, brows low, looking sideways",
+  "reactions": [
+   "I see what you're doing.",
+   "Something's off here."
+  ],
+  "key": "e03_suspicious"
+ },
+ {
+  "id": 4,
+  "name": "Cynical",
+  "desc": "Half smile on one side, heavy eyelids",
+  "reactions": [
+   "Oh, great. Another one.",
+   "Shocking. Truly."
+  ],
+  "key": "e04_cynical"
+ },
+ {
+  "id": 5,
+  "name": "Unimpressed",
+  "desc": "Flat mouth, heavy eyelids, brows flat",
+  "reactions": [
+   "Wow. Groundbreaking.",
+   "Is that it?"
+  ],
+  "key": "e05_unimpressed"
+ },
+ {
+  "id": 6,
+  "name": "Impressed",
+  "desc": "Brows up, lips pressed together, small nod",
+  "reactions": [
+   "Okay, okay.",
+   "Respect."
+  ],
+  "key": "e06_impressed"
+ },
+ {
+  "id": 7,
+  "name": "Smug",
+  "desc": "One-sided smile, chin up, lids lowered",
+  "reactions": [
+   "Told you so.",
+   "Obviously."
+  ],
+  "key": "e07_smug"
+ },
+ {
+  "id": 8,
+  "name": "Proud",
+  "desc": "Closed smile, chin up, eyes soft",
+  "reactions": [
+   "That's my work.",
+   "Nailed it."
+  ],
+  "key": "e08_proud"
+ },
+ {
+  "id": 9,
+  "name": "Trying not to laugh",
+  "desc": "Eyes smiling, lips pressed tight, as if holding in a laugh",
+  "reactions": [
+   "Do not laugh.",
+   "Keep it together."
+  ],
+  "char": "🤭"
+ },
+ {
+  "id": 10,
+  "name": "Awkward smile",
+  "desc": "Teeth showing, mouth stretched wide, brows slightly up",
+  "reactions": [
+   "This is fine.",
+   "Nobody say anything."
+  ],
+  "key": "e10_awkward_smile"
+ },
+ {
+  "id": 11,
+  "name": "Embarrassed",
+  "desc": "Small smile, eyes down, inner brows up",
+  "reactions": [
+   "Please stop looking.",
+   "I want to disappear."
+  ],
+  "key": "e11_embarrassed"
+ },
+ {
+  "id": 12,
+  "name": "Shy",
+  "desc": "Small smile, eyes down",
+  "reactions": [
+   "Oh... hi.",
+   "Don't look at me."
+  ],
+  "key": "e12_shy"
+ },
+ {
+  "id": 13,
+  "name": "Flirty",
+  "desc": "One eye half closed, soft smile",
+  "reactions": [
+   "Well hello.",
+   "Hey, you."
+  ],
+  "key": "e13_flirty"
+ },
+ {
+  "id": 14,
+  "name": "Kiss",
+  "desc": "Lips puckered",
+  "reactions": [
+   "Mwah!",
+   "Come here."
+  ],
+  "key": "e14_kiss"
+ },
+ {
+  "id": 15,
+  "name": "Disgusted",
+  "desc": "Nose wrinkled, upper lip raised",
+  "reactions": [
+   "Ew.",
+   "I'm going to be sick."
+  ],
+  "key": "e15_disgusted"
+ },
+ {
+  "id": 16,
+  "name": "Disappointed",
+  "desc": "Mouth corners down, inner brows up",
+  "reactions": [
+   "I expected more.",
+   "Well, that's a letdown."
+  ],
+  "key": "e16_disappointed"
+ },
+ {
+  "id": 17,
+  "name": "Sarcastic",
+  "desc": "Eyes rolling up, one-sided smirk",
+  "reactions": [
+   "Yeah, right.",
+   "Oh, sure."
+  ],
+  "key": "e17_sarcastic"
+ },
+ {
+  "id": 18,
+  "name": "Confused",
+  "desc": "Brows pulled together, mouth to the side",
+  "reactions": [
+   "Wait, what?",
+   "WTF?"
+  ],
+  "key": "e18_confused"
+ },
+ {
+  "id": 19,
+  "name": "Aha moment",
+  "desc": "Brows up, eyes wide, big open smile",
+  "reactions": [
+   "Oh! I get it!",
+   "Wait a second..."
+  ],
+  "key": "e19_aha_moment"
+ },
+ {
+  "id": 20,
+  "name": "Shocked",
+  "desc": "Jaw dropped, eyes wide, brows high",
+  "reactions": [
+   "No way.",
+   "I can't believe it."
+  ],
+  "key": "e20_shocked"
+ },
+ {
+  "id": 21,
+  "name": "Mind blown",
+  "desc": "Eyes very wide, mouth open wide",
+  "reactions": [
+   "My brain just broke.",
+   "Wait, WHAT?"
+  ],
+  "key": "e21_mind_blown"
+ },
+ {
+  "id": 22,
+  "name": "Pitying",
+  "desc": "Inner brows up, small frown",
+  "reactions": [
+   "Aww, you poor thing.",
+   "Bless your heart."
+  ],
+  "key": "e22_pitying"
+ },
+ {
+  "id": 23,
+  "name": "Panicked",
+  "desc": "Wide eyes, mouth open, brows up",
+  "reactions": [
+   "Run.",
+   "This is bad."
+  ],
+  "key": "e23_panicked"
+ },
+ {
+  "id": 24,
+  "name": "Mischievous",
+  "desc": "Wide grin, brows low",
+  "reactions": [
+   "I have a plan.",
+   "This will be fun."
+  ],
+  "key": "e24_mischievous"
+ },
+ {
+  "id": 25,
+  "name": "Excited",
+  "desc": "Eyes wide, big open smile",
+  "reactions": [
+   "Yes! Yes! Yes!",
+   "I can't wait!"
+  ],
+  "key": "e25_excited"
+ },
+ {
+  "id": 26,
+  "name": "Laughing hard",
+  "desc": "Mouth wide open, eyes squeezed shut",
+  "reactions": [
+   "I'm dying.",
+   "Stop, I can't."
+  ],
+  "key": "e26_laughing_hard"
+ },
+ {
+  "id": 27,
+  "name": "Sad",
+  "desc": "Mouth corners down, inner brows up",
+  "reactions": [
+   "That hurts.",
+   "I need a minute."
+  ],
+  "key": "e27_sad"
+ },
+ {
+  "id": 28,
+  "name": "Angry",
+  "desc": "Brows down, mouth tight or bared",
+  "reactions": [
+   "Do not test me.",
+   "I'm done."
+  ],
+  "key": "e28_angry"
+ },
+ {
+  "id": 29,
+  "name": "Seething",
+  "desc": "Jaw clenched, brows low, lips pressed",
+  "reactions": [
+   "I'm calm. I'm perfectly calm.",
+   "Say that again."
+  ],
+  "key": "e29_seething"
+ },
+ {
+  "id": 30,
+  "name": "Annoyed",
+  "desc": "Brows down, mouth pulled to the side",
+  "reactions": [
+   "Seriously?",
+   "Not this again."
+  ],
+  "key": "e30_annoyed"
+ },
+ {
+  "id": 31,
+  "name": "Pouting",
+  "desc": "Lower lip pushed out",
+  "reactions": [
+   "But whyyy?",
+   "Fine. Be that way."
+  ],
+  "key": "e31_pouting"
+ },
+ {
+  "id": 32,
+  "name": "Oops",
+  "desc": "One-sided grimace with teeth, brows up",
+  "reactions": [
+   "Oops.",
+   "My bad."
+  ],
+  "key": "e32_oops"
+ },
+ {
+  "id": 33,
+  "name": "Side-eye",
+  "desc": "Eyes looking sideways, face still",
+  "reactions": [
+   "I heard that.",
+   "Did you just say that?"
+  ],
+  "key": "e33_side_eye"
+ },
+ {
+  "id": 34,
+  "name": "Positively surprised",
+  "desc": "Brows high, eyes wide, open smile",
+  "reactions": [
+   "Oh, nice!",
+   "Well, look at that!"
+  ],
+  "key": "e34_positively_surprised"
+ },
+ {
+  "id": 35,
+  "name": "Poker face",
+  "desc": "Completely still face",
+  "reactions": [
+   "Nothing to see here.",
+   "I'm not telling."
+  ],
+  "key": "e35_poker_face"
+ },
+ {
+  "id": 36,
+  "name": "Thinking",
+  "desc": "One brow up, eyes looking aside, lips pursed to the side",
+  "reactions": [
+   "Let me think about that...",
+   "Interesting question."
+  ],
+  "char": "🤔"
+ },
+ {
+  "id": 37,
+  "name": "Cool",
+  "desc": "Relaxed brows, wide confident grin",
+  "reactions": [
+   "Yeah. I'm cool.",
+   "Too cool for this."
+  ],
+  "key": "e37_cool"
+ }
+]
