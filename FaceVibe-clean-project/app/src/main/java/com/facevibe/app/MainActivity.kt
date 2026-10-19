@@ -218,7 +218,10 @@ class MainActivity : ComponentActivity() {
 
         val sims = t.similarities(x)
         var target = 0
-        if (!t.isNeutral(x)) {
+        // Two thresholds (hysteresis): easy to stay in a group, harder to fall back to neutral and back.
+        val energy = t.energy(x)
+        val moving = if (curGroup == 0) energy > NEUTRAL_EXIT else energy > NEUTRAL_ENTER
+        if (moving) {
             target = 1
             for (i in 1 until sims.size) if (sims[i] > sims[target]) target = i
         }
@@ -258,10 +261,12 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        private const val FEATURE_ALPHA = 0.2f   // extra smoothing on the face pattern
-        private const val HOLD_FRAMES = 14        // ~0.6 s of consistent evidence before switching
-        private const val MIN_DWELL_MS = 900L     // never switch twice within this time
-        private const val SWITCH_MARGIN = 0.08f   // new group must beat the current one by this much
+        private const val FEATURE_ALPHA = 0.12f   // extra smoothing on the face pattern
+        private const val HOLD_FRAMES = 24        // ~0.6 s of consistent evidence before switching
+        private const val MIN_DWELL_MS = 2500L     // never switch twice within this time
+        private const val NEUTRAL_ENTER = 0.08f   // below this the face counts as neutral again
+        private const val NEUTRAL_EXIT = 0.15f    // above this a neutral face starts counting as an expression
+        private const val SWITCH_MARGIN = 0.15f   // new group must beat the current one by this much
 
         private val GREEN = Color.parseColor("#2ECC71")
         private val AMBER = Color.parseColor("#F5A623")

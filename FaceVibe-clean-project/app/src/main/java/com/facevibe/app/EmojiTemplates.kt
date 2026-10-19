@@ -85,15 +85,18 @@ class EmojiTemplates(context: Context) {
         )
     }
 
-    /** True when the face is hardly moving at all. */
-    fun isNeutral(x: FloatArray): Boolean {
+    /** How much the face is moving overall (0 = completely still). */
+    fun energy(x: FloatArray): Float {
         var s = 0f
         for (i in x.indices) {
             val v = x[i] * neutralWeights[i]
             s += v * v
         }
-        return sqrt(s) < NEUTRAL_ENERGY
+        return sqrt(s)
     }
+
+    /** True when the face is hardly moving at all. */
+    fun isNeutral(x: FloatArray): Boolean = energy(x) < NEUTRAL_ENERGY
 
     /** Cosine similarity of the live features to every template (index 0 = neutral, always 0). */
     fun similarities(x: FloatArray): FloatArray = FloatArray(templates.size) { i ->
