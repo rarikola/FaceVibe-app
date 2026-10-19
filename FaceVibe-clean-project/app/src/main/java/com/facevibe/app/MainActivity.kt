@@ -85,6 +85,9 @@ class MainActivity : ComponentActivity() {
     private var tPhase = 0            // 0 paused, 1 get ready, 2 recording
     private var tStart = 0L
     private var tAdd = false
+    private var testMode = false
+    private val testHits = HashMap<Int, IntArray>()
+    private val testWrong = HashMap<Pair<Int, Int>, Int>()
     private var tAcc: FloatArray? = null
     private var tN = 0
     private var curId = -1
@@ -101,8 +104,8 @@ class MainActivity : ComponentActivity() {
     private fun switchTo(id: Int) {
         val e = exprs.byId(id) ?: return
         val prefs = getSharedPreferences("f2e", MODE_PRIVATE)
-        val n = prefs.getInt("n_" + id, 0)
-        prefs.edit().putInt("n_" + id, n + 1).apply()
+        val n = prefs.getInt("m_" + id, 0)
+        prefs.edit().putInt("m_" + id, n + 1).apply()
         curId = id
         showExpr(e, emojiImg, emoji)
         emojiLabels.visibility = View.VISIBLE
@@ -122,7 +125,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun openTest() {
+        testMode = true; testHits.clear(); testWrong.clear()
+        teachOn = true
+        teachPanel.visibility = View.VISIBLE
+        gotoExpr(0)
+    }
+
     private fun openTeach() {
+        testMode = false
         teachOn = true
         teachPanel.visibility = View.VISIBLE
         val done = protos.taughtIds()
@@ -154,7 +165,33 @@ class MainActivity : ComponentActivity() {
         startReady()
     }
 
+    private fun finishTest() {
+        val sb = StringBuilder()
+        var ok = 0; var all = 0
+        for (e in exprs.list) {
+            val h = testHits[e.id] ?: continue
+            ok += h[0]; all += h[1]
+            val pct = if (h[1] > 0) h[0] * 100 / h[1] else 0
+            val wrong = testWrong.filter { it.key.first == e.id }.maxByOrNull { it.value }
+            sb.append("${e.ch ?: ""} ${e.name}: $pct%")
+            if (wrong != null && pct < 90) sb.append("  (often ${exprs.byId(wrong.key.second)?.name})")
+            sb.append("\n")
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Accuracy: ${if (all > 0) ok * 100 / all else 0}%")
+            .setMessage(sb.toString())
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
     private fun finishTeach() {
+        if (testMode) {
+            testMode = false; teachOn = false; tPhase = 0
+            teachPanel.visibility = View.GONE
+            voteI = 0; votes.fill(-1); curId = -1
+            finishTest()
+            return
+        }
         teachOn = false
         tPhase = 0
         teachPanel.visibility = View.GONE
@@ -172,7 +209,8 @@ class MainActivity : ComponentActivity() {
         AlertDialog.Builder(this)
             .setTitle("Easily mixed up")
             .setMessage(msg + "\n\nTip: make these faces a bit more different from each other, then Teach again.")
-            .setPositiveButton("OK", null)
+            .setPositiveButton("Test accuracy") { _, _ -> openTest() }
+            .setNegativeButton("Close", null)
             .show()
     }
 
@@ -195,17 +233,25 @@ class MainActivity : ComponentActivity() {
             if (left <= 0) { tPhase = 2; tStart = now; tAcc = null; tN = 0 }
             return
         }
-        tStatus.text = "Hold: ${e.name}"
+        tStatus.text = (if (testMode) "Test: " else "Hold: ") + e.name
         tProgress.progress = (el * 100 / REC_MS).toInt().coerceAtMost(100)
         if (el >= SETTLE_MS) {
             val v = protos.vector(emotions.smoothed())
-            if (v != null) {
+            if (v != null && testMode) {
+                val got = protos.match(v, neutralId)
+                val h = testHits.getOrPut(e.id) { IntArray(2) }
+                h[1]++
+                if (got == e.id) h[0]++ else testWrong.merge(e.id to got, 1, Int::plus)
+                tN++
+            } else if (v != null) {
                 val a = tAcc ?: FloatArray(v.size).also { tAcc = it }
                 for (i in v.indices) a[i] += v[i]
                 tN++
             }
         }
-        if (el >= REC_MS) {
+        if (el >= REC_MS && testMode) {
+            gotoExpr(tIdx + 1)
+        } else if (el >= REC_MS) {
             val a = tAcc
             if (a != null && tN >= 10) {
                 val n = tN
@@ -240,8 +286,8 @@ class MainActivity : ComponentActivity() {
         tCount = findViewById(R.id.tCount); tStatus = findViewById(R.id.tStatus)
         tProgress = findViewById(R.id.tProgress); bPause = findViewById(R.id.bPause)
         exprs = Expressions(applicationContext)
-        protos = Prototypes(java.io.File(filesDir, "prototypes.json"))
-        neutralId = exprs.list.firstOrNull { it.name == "Poker face" }?.id ?: 35
+        protos = Prototypes(java.io.File(filesDir, "prototypes18.json"))
+        neutralId = exprs.list.firstOrNull { it.name == "Natural face" }?.id ?: 1
         findViewById<View>(R.id.teachBtn).setOnClickListener { openTeach() }
         findViewById<View>(R.id.bBack).setOnClickListener { gotoExpr((tIdx - 1).coerceAtLeast(0)) }
         findViewById<View>(R.id.bSkip).setOnClickListener { gotoExpr(tIdx + 1) }
