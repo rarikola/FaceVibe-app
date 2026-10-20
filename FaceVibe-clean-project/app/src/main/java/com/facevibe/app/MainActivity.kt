@@ -175,6 +175,33 @@ class MainActivity : ComponentActivity() {
         tCount.text = "${tIdx + 1} / ${exprs.list.size}   ·   taught: ${protos.taughtIds().size}" + if (tAdd) "   ·   extra sample" else ""
     }
 
+    private fun teachMenu() {
+        val n = protos.taughtIds().size
+        AlertDialog.Builder(this)
+            .setTitle("Teach")
+            .setMessage("You have taught $n of ${exprs.list.size} expressions.\n\nMake each face when asked and hold it for 3 seconds.")
+            .setPositiveButton("Start teaching") { _, _ -> openTeach() }
+            .setNeutralButton("Delete all training") { _, _ -> confirmReset() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun confirmReset() {
+        AlertDialog.Builder(this)
+            .setTitle("Delete all training?")
+            .setMessage("This erases every face you taught and your own emojis. The app goes back to its starting state.")
+            .setPositiveButton("Delete") { _, _ ->
+                protos.clear()
+                exprs.clearCustom()
+                getSharedPreferences("f2e", MODE_PRIVATE).edit().clear().apply()
+                voteI = 0; votes.fill(-1); curId = -1
+                emoji.text = "🙂"; emojiImg.visibility = View.GONE; emojiLabels.visibility = View.GONE
+                Toast.makeText(this, "Training deleted", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun setSpeed(level: Int) {
         voteNeed = intArrayOf(7, 6, 5, 4, 3)[level]
         dwellMs = longArrayOf(900, 700, 500, 350, 200)[level]
@@ -394,7 +421,7 @@ class MainActivity : ComponentActivity() {
         exprs = Expressions(applicationContext)
         protos = Prototypes(java.io.File(filesDir, "prototypes18.json"))
         neutralId = exprs.list.firstOrNull { it.name == "Natural face" }?.id ?: 1
-        findViewById<View>(R.id.teachBtn).setOnClickListener { openTeach() }
+        findViewById<View>(R.id.teachBtn).setOnClickListener { teachMenu() }
         frozen = findViewById(R.id.frozen)
         frozen.setOnClickListener { frozen.visibility = View.GONE }
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE

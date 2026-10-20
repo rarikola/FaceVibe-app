@@ -46,6 +46,11 @@ class Expressions(private val ctx: Context) {
         }
     } catch (_: Throwable) { emptyList() }
 
+    fun clearCustom() {
+        list = list.filter { it.id <= 99 }
+        try { customFile.delete() } catch (_: Throwable) {}
+    }
+
     /** A user-made expression: any emoji, a name and an optional reaction. */
     fun addCustom(ch: String, name: String, reaction: String): Expr {
         val id = (list.maxOfOrNull { it.id } ?: 0).coerceAtLeast(99) + 1

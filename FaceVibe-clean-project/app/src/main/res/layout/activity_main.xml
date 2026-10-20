@@ -216,7 +216,7 @@
                     android:id="@+id/tCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="#6B6B76"
+                    android:textColor="#111114"
                     android:textSize="13sp" />
                 <TextView
                     android:id="@+id/tName"
@@ -229,7 +229,7 @@
                     android:id="@+id/tDesc"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="#3A3A44"
+                    android:textColor="#111114"
                     android:textSize="14sp" />
             </LinearLayout>
         </LinearLayout>
@@ -260,26 +260,26 @@
                 android:max="100" />
             <Button android:id="@+id/bNew" style="?android:attr/buttonBarButtonStyle"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="+ Add your own emoji" android:textSize="14sp" />
+                android:text="+ Add your own emoji" android:textColor="#111114" android:textStyle="bold" android:textSize="14sp" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <Button android:id="@+id/bBack" style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:minWidth="0dp" android:padding="2dp" android:text="◀ Back" android:textSize="13sp" />
+                    android:minWidth="0dp" android:padding="2dp" android:textColor="#111114" android:textStyle="bold" android:text="◀ Back" android:textSize="13sp" />
                 <Button android:id="@+id/bSkip" style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:minWidth="0dp" android:padding="2dp" android:text="Skip ▶" android:textSize="13sp" />
+                    android:minWidth="0dp" android:padding="2dp" android:textColor="#111114" android:textStyle="bold" android:text="Skip ▶" android:textSize="13sp" />
                 <Button android:id="@+id/bAdd" style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:minWidth="0dp" android:padding="2dp" android:text="+ Sample" android:textSize="13sp" />
+                    android:minWidth="0dp" android:padding="2dp" android:textColor="#111114" android:textStyle="bold" android:text="+ Sample" android:textSize="13sp" />
                 <Button android:id="@+id/bPause" style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:minWidth="0dp" android:padding="2dp" android:text="Pause" android:textSize="13sp" />
+                    android:minWidth="0dp" android:padding="2dp" android:textColor="#111114" android:textStyle="bold" android:text="Pause" android:textSize="13sp" />
                 <Button android:id="@+id/bFinish" style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:minWidth="0dp" android:padding="2dp" android:text="Finish" android:textSize="13sp" />
+                    android:minWidth="0dp" android:padding="2dp" android:textColor="#111114" android:textStyle="bold" android:text="Finish" android:textSize="13sp" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
