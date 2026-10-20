@@ -21,8 +21,8 @@ android {
         applicationId = "com.face2emoji.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "1.1-eighteen"
+        versionCode = 15
+        versionName = "1.2-share"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 

@@ -103,6 +103,58 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/shareBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="112dp"
+        android:layout_marginBottom="32dp"
+        android:background="@drawable/bg_pill"
+        android:elevation="4dp"
+        android:paddingStart="18dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="10dp"
+        android:text="Share"
+        android:textColor="#1B1B1F"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:id="@+id/speedBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="92dp"
+        android:background="@drawable/bg_pill"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="4dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Steady"
+            android:textColor="#1B1B1F"
+            android:textSize="12sp" />
+        <SeekBar
+            android:id="@+id/speed"
+            android:layout_width="170dp"
+            android:layout_height="wrap_content"
+            android:max="4"
+            android:progress="2" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fast"
+            android:textColor="#1B1B1F"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <TextView
         android:id="@+id/teachBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -206,6 +258,9 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="8dp"
                 android:max="100" />
+            <Button android:id="@+id/bNew" style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="+ Add your own emoji" android:textSize="14sp" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -228,4 +283,12 @@
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
+
+    <ImageView
+        android:id="@+id/frozen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="20dp"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
 </FrameLayout>

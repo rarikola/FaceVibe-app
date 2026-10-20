@@ -10,6 +10,21 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.Toast
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.app.AlertDialog
@@ -85,6 +100,9 @@ class MainActivity : ComponentActivity() {
     private var tPhase = 0            // 0 paused, 1 get ready, 2 recording
     private var tStart = 0L
     private var tAdd = false
+    private lateinit var frozen: ImageView
+    private var voteNeed = 5
+    private var dwellMs = 500L
     private var testMode = false
     private val testHits = HashMap<Int, IntArray>()
     private val testWrong = HashMap<Pair<Int, Int>, Int>()
@@ -119,7 +137,7 @@ class MainActivity : ComponentActivity() {
         voteI = (voteI + 1) % VOTE_N
         val top = votes.filter { it >= 0 }.groupingBy { it }.eachCount().maxByOrNull { it.value } ?: return
         val now = SystemClock.uptimeMillis()
-        if (top.key != curId && top.value >= VOTE_NEED && (curId < 0 || now - lastSwitch >= TAUGHT_DWELL_MS)) {
+        if (top.key != curId && top.value >= voteNeed && (curId < 0 || now - lastSwitch >= dwellMs)) {
             switchTo(top.key)
             lastSwitch = now
         }
@@ -157,8 +175,96 @@ class MainActivity : ComponentActivity() {
         tCount.text = "${tIdx + 1} / ${exprs.list.size}   ·   taught: ${protos.taughtIds().size}" + if (tAdd) "   ·   extra sample" else ""
     }
 
-    private fun gotoExpr(i: Int) {
+    private fun setSpeed(level: Int) {
+        voteNeed = intArrayOf(7, 6, 5, 4, 3)[level]
+        dwellMs = longArrayOf(900, 700, 500, 350, 200)[level]
+    }
+
+    private fun addOwn() {
+        tPhase = 0
+        bPause.text = "Start"
+        val lay = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(48, 16, 48, 0) }
+        val e1 = EditText(this).apply { hint = "Emoji (from your emoji keyboard)" }
+        val e2 = EditText(this).apply { hint = "Name, e.g. Hungry" }
+        val e3 = EditText(this).apply { hint = "Reaction text (optional)" }
+        lay.addView(e1); lay.addView(e2); lay.addView(e3)
+        AlertDialog.Builder(this)
+            .setTitle("Add your own")
+            .setView(lay)
+            .setPositiveButton("Add") { _, _ ->
+                val ch = e1.text.toString().trim()
+                if (ch.isNotEmpty()) {
+                    exprs.addCustom(ch, e2.text.toString().trim(), e3.text.toString().trim())
+                    gotoExpr(exprs.list.size - 1)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /** Camera picture with the emoji card and reaction drawn on it, as it looks on screen. */
+    private fun composeShare(cam: Bitmap): Bitmap {
+        val bmp = cam.copy(Bitmap.Config.ARGB_8888, true)
+        val c = Canvas(bmp)
+        val s = bmp.width / 411f
+        val white = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+        val card = 84 * s
+        val cx = bmp.width - 12 * s - card
+        c.drawRoundRect(RectF(cx, 16 * s, cx + card, 16 * s + card), 20 * s, 20 * s, white)
+        val ep = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 46 * s; textAlign = Paint.Align.CENTER }
+        c.drawText(emoji.text.toString(), cx + card / 2, 16 * s + card / 2 + 16 * s, ep)
+        val txt = emojiLabels.text.toString()
+        if (emojiLabels.visibility == View.VISIBLE && txt.isNotEmpty()) {
+            val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#1B1B1F"); textSize = 24 * s; isFakeBoldText = true
+            }
+            val lay = StaticLayout.Builder.obtain(txt, 0, txt.length, tp, (226 * s).toInt()).build()
+            val pw = lay.width + 24 * s; val ph = lay.height + 12 * s
+            c.drawRoundRect(RectF(12 * s, 16 * s, 12 * s + pw, 16 * s + ph), 20 * s, 20 * s, white)
+            c.save(); c.translate(24 * s, 22 * s); lay.draw(c); c.restore()
+        }
+        val wp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE; textSize = 14 * s; setShadowLayer(3 * s, 0f, 0f, Color.BLACK)
+        }
+        c.drawText("face2emoji", 16 * s, bmp.height - 20 * s, wp)
+        return bmp
+    }
+
+    private fun sharePhoto() {
+        val cam = previewView.bitmap
+        if (cam == null) { Toast.makeText(this, "Camera not ready", Toast.LENGTH_SHORT).show(); return }
+        val bmp = composeShare(cam)
+        frozen.setImageBitmap(bmp)
+        frozen.visibility = View.VISIBLE
+        try {
+            val dir = File(cacheDir, "shared").apply { mkdirs() }
+            val f = File(dir, "face2emoji.png")
+            FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", f)
+            val i = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(i, "Share"))
+        } catch (t: Throwable) {
+            frozen.visibility = View.GONE
+            Toast.makeText(this, "Could not share: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::frozen.isInitialized) frozen.visibility = View.GONE
+    }
+
+    private fun gotoExpr(i0: Int) {
+        var i = i0
         if (i < 0) return
+        if (testMode) {
+            val done = protos.taughtIds()
+            while (i < exprs.list.size && exprs.list[i].id !in done) i++
+        }
         if (i >= exprs.list.size) { finishTeach(); return }
         tIdx = i; tAdd = false
         showTeachExpr()
@@ -289,6 +395,22 @@ class MainActivity : ComponentActivity() {
         protos = Prototypes(java.io.File(filesDir, "prototypes18.json"))
         neutralId = exprs.list.firstOrNull { it.name == "Natural face" }?.id ?: 1
         findViewById<View>(R.id.teachBtn).setOnClickListener { openTeach() }
+        frozen = findViewById(R.id.frozen)
+        frozen.setOnClickListener { frozen.visibility = View.GONE }
+        previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        findViewById<View>(R.id.shareBtn).setOnClickListener { sharePhoto() }
+        findViewById<View>(R.id.bNew).setOnClickListener { addOwn() }
+        val sp = findViewById<SeekBar>(R.id.speed)
+        val lvl = getSharedPreferences("f2e", MODE_PRIVATE).getInt("speed", 2)
+        sp.progress = lvl; setSpeed(lvl)
+        sp.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(b: SeekBar?, p: Int, u: Boolean) {
+                setSpeed(p)
+                getSharedPreferences("f2e", MODE_PRIVATE).edit().putInt("speed", p).apply()
+            }
+            override fun onStartTrackingTouch(b: SeekBar?) {}
+            override fun onStopTrackingTouch(b: SeekBar?) {}
+        })
         findViewById<View>(R.id.bBack).setOnClickListener { gotoExpr((tIdx - 1).coerceAtLeast(0)) }
         findViewById<View>(R.id.bSkip).setOnClickListener { gotoExpr(tIdx + 1) }
         findViewById<View>(R.id.bAdd).setOnClickListener { tAdd = true; showTeachExpr(); startReady() }
@@ -488,8 +610,6 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val VOTE_N = 8
-        private const val VOTE_NEED = 5
-        private const val TAUGHT_DWELL_MS = 500L
         private const val READY_MS = 2000L
         private const val SETTLE_MS = 500L
         private const val REC_MS = 3000L
