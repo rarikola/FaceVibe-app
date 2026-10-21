@@ -99,10 +99,11 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
 
         // anger turns the face red, like the angry emoji
         val smile = b2("mouthSmileLeft", "mouthSmileRight", 1.5f)
-        val anger = (b2("browDownLeft", "browDownRight", 1.7f) * 0.55f +
-            b2("noseSneerLeft", "noseSneerRight", 2f) * 0.30f +
-            b2("mouthPressLeft", "mouthPressRight", 2f) * 0.20f - smile * 0.4f).coerceIn(0f, 1f)
-        val t = ((anger - 0.25f) / 0.5f).coerceIn(0f, 1f)
+        val avgDown = (g("browDownLeft") + g("browDownRight")) / 2f
+        val avgSneer = (g("noseSneerLeft") + g("noseSneerRight")) / 2f
+        val avgPress = (g("mouthPressLeft") + g("mouthPressRight")) / 2f
+        val anger = avgDown + avgSneer * 0.6f + avgPress * 0.4f - smile * 0.5f
+        val t = ((anger - 0.40f) / 0.35f).coerceIn(0f, 1f)
 
         fill.shader = RadialGradient(cx - r * 0.3f, cy - r * 0.35f, r * 1.4f,
             intArrayOf(lerp(Color.parseColor("#FFE066"), Color.parseColor("#FF8A5B"), t),
