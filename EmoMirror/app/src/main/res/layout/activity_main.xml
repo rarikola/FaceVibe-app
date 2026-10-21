@@ -1,43 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0E1220">
-
-    <com.emomirror.app.MirrorView
-        android:id="@+id/mirror"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+    android:background="#0E1220"
+    android:orientation="vertical">
 
     <FrameLayout
-        android:id="@+id/box"
-        android:layout_width="220dp"
-        android:layout_height="300dp"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="12dp"
-        android:background="@drawable/bg_box"
-        android:elevation="8dp"
-        android:padding="3dp">
+        android:id="@+id/feed"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="50">
         <androidx.camera.view.PreviewView
             android:id="@+id/previewView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_pill"
+            android:paddingStart="14dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="8dp"
+            android:text="Starting…"
+            android:textColor="#1B1B1F"
+            android:textSize="14sp"
+            android:textStyle="bold" />
     </FrameLayout>
 
-    <TextView
-        android:id="@+id/status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|start"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/bg_pill"
-        android:paddingStart="14dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="14dp"
-        android:paddingBottom="8dp"
-        android:text="Starting…"
-        android:textColor="#1B1B1F"
-        android:textSize="14sp"
-        android:textStyle="bold" />
-</FrameLayout>
+    <FrameLayout
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:background="#1B2238">
+        <View
+            android:layout_width="56dp"
+            android:layout_height="5dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_handle" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/bottom"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="50"
+        android:orientation="vertical">
+
+        <com.emomirror.app.MirrorView
+            android:id="@+id/mirror"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingTop="6dp">
+            <TextView
+                android:id="@+id/captureBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="14dp"
+                android:background="@drawable/bg_pill"
+                android:paddingStart="26dp"
+                android:paddingTop="11dp"
+                android:paddingEnd="26dp"
+                android:paddingBottom="11dp"
+                android:text="Capture"
+                android:textColor="#1B1B1F"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/shareBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_pill"
+                android:paddingStart="26dp"
+                android:paddingTop="11dp"
+                android:paddingEnd="26dp"
+                android:paddingBottom="11dp"
+                android:text="Share"
+                android:textColor="#1B1B1F"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingTop="8dp"
+            android:paddingBottom="14dp"
+            android:text="EmoMirror"
+            android:textColor="#8A93AD"
+            android:textSize="13sp" />
+    </LinearLayout>
+</LinearLayout>

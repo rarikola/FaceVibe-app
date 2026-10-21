@@ -42,11 +42,32 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
             val a = if (k.startsWith("eyeBlink")) 0.75f else 0.55f
             v[k] = old + a * (target - old)
         }
-        val ty = pose?.getOrNull(0) ?: 0f
-        val tp = pose?.getOrNull(1) ?: 0f
-        val tr = pose?.getOrNull(2) ?: 0f
+        // the tracker can report a head angle as 178 instead of -2 (same pose, turned half a circle);
+        // fold every angle into -90..90 so the face never flips upside down
+        val ty = fold(pose?.getOrNull(0) ?: 0f)
+        val tp = fold(pose?.getOrNull(1) ?: 0f)
+        val tr = fold(pose?.getOrNull(2) ?: 0f)
         yaw += 0.4f * (ty - yaw); pitch += 0.4f * (tp - pitch); roll += 0.4f * (tr - roll)
-        invalidate()
+        if (!frozen) invalidate()
+    }
+
+    var frozen = false
+
+    private fun fold(a: Float): Float {
+        var x = a
+        while (x > 90f) x -= 180f
+        while (x < -90f) x += 180f
+        return x
+    }
+
+    /** The current picture of the face, with the app name in the corner. */
+    fun snapshot(): android.graphics.Bitmap {
+        val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        draw(c)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(180, 255, 255, 255); textSize = width * 0.04f }
+        c.drawText("EmoMirror", width * 0.04f, height - width * 0.04f, p)
+        return bmp
     }
 
     private fun g(k: String) = v[k] ?: 0f
@@ -69,8 +90,8 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     override fun onDraw(c: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
         c.drawRect(0f, 0f, w, h, bg)
-        val r = min(w * 0.42f, h * 0.22f)
-        val baseCy = h * 0.36f
+        val r = min(w * 0.38f, h * 0.38f)
+        val baseCy = h * 0.5f
         val cx = w / 2f + (yaw / 45f).coerceIn(-1f, 1f) * r * 0.20f
         val cy = baseCy + (pitch / 45f).coerceIn(-1f, 1f) * r * 0.15f
         c.save()

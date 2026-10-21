@@ -1,14 +1,17 @@
 package com.emomirror.app
 
 import android.Manifest
+import android.content.ContentValues
+import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Outline
+import android.graphics.Bitmap
 import android.os.Bundle
-import android.view.Gravity
+import android.provider.MediaStore
+import android.view.MotionEvent
 import android.view.View
-import android.view.ViewOutlineProvider
-import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -17,22 +20,27 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * EmoMirror: a drawn face in the middle copies your face live; the camera picture sits in a corner
- * (tap it to move it to the other corner). Everything runs on the phone; nothing is saved or sent.
+ * EmoMirror: camera picture on top, a drawn face below that copies your face live.
+ * Drag the bar between them to change the split. Capture saves the drawn face to Pictures,
+ * Share sends it to another app. Everything runs on the phone; nothing is sent anywhere by itself.
  */
 class MainActivity : ComponentActivity() {
 
     private lateinit var previewView: PreviewView
     private lateinit var mirror: MirrorView
-    private lateinit var box: FrameLayout
     private lateinit var status: TextView
+    private lateinit var root: View
+    private lateinit var feed: View
+    private lateinit var bottom: View
     private lateinit var analysisExecutor: ExecutorService
     private var engine: FaceEngine? = null
-    private var boxOnRight = true
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -44,25 +52,81 @@ class MainActivity : ComponentActivity() {
         setContentView(R.layout.activity_main)
         previewView = findViewById(R.id.previewView)
         mirror = findViewById(R.id.mirror)
-        box = findViewById(R.id.box)
         status = findViewById(R.id.status)
+        root = findViewById(R.id.root)
+        feed = findViewById(R.id.feed)
+        bottom = findViewById(R.id.bottom)
         previewView.scaleType = PreviewView.ScaleType.FILL_CENTER
-        previewView.clipToOutline = true
-        previewView.outlineProvider = object : ViewOutlineProvider() {
-            override fun getOutline(view: View, outline: Outline) {
-                outline.setRoundRect(0, 0, view.width, view.height, 19f * resources.displayMetrics.density)
+
+        val prefs = getSharedPreferences("em", MODE_PRIVATE)
+        setSplit(prefs.getFloat("split", 0.5f))
+        findViewById<View>(R.id.divider).setOnTouchListener { v, e ->
+            if (e.actionMasked == MotionEvent.ACTION_DOWN || e.actionMasked == MotionEvent.ACTION_MOVE) {
+                val loc = IntArray(2); root.getLocationOnScreen(loc)
+                val usable = (root.height - v.height).coerceAtLeast(1)
+                val f = ((e.rawY - loc[1] - v.height / 2f) / usable).coerceIn(0.2f, 0.75f)
+                setSplit(f)
+                if (e.actionMasked == MotionEvent.ACTION_MOVE) prefs.edit().putFloat("split", f).apply()
             }
+            true
         }
-        box.setOnClickListener {
-            boxOnRight = !boxOnRight
-            (box.layoutParams as FrameLayout.LayoutParams).gravity =
-                Gravity.BOTTOM or (if (boxOnRight) Gravity.END else Gravity.START)
-            box.requestLayout()
-        }
+        findViewById<View>(R.id.captureBtn).setOnClickListener { capture() }
+        findViewById<View>(R.id.shareBtn).setOnClickListener { share() }
+
         analysisExecutor = Executors.newSingleThreadExecutor()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED
         ) startCamera() else permissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    private fun setSplit(f: Float) {
+        (feed.layoutParams as LinearLayout.LayoutParams).weight = f * 100f
+        (bottom.layoutParams as LinearLayout.LayoutParams).weight = (1f - f) * 100f
+        root.requestLayout()
+    }
+
+    private fun capture() {
+        val bmp = mirror.snapshot()
+        mirror.frozen = true
+        mirror.postDelayed({ mirror.frozen = false }, 700)
+        try {
+            val cv = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, "EmoMirror_${System.currentTimeMillis()}.png")
+                put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/EmoMirror")
+            }
+            val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv)
+            if (uri == null) throw IllegalStateException("no uri")
+            contentResolver.openOutputStream(uri)?.use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            Toast.makeText(this, "Saved to Pictures/EmoMirror", Toast.LENGTH_SHORT).show()
+        } catch (t: Throwable) {
+            Toast.makeText(this, "Could not save: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun share() {
+        val bmp = mirror.snapshot()
+        mirror.frozen = true
+        try {
+            val dir = File(cacheDir, "shared").apply { mkdirs() }
+            val f = File(dir, "emomirror.png")
+            FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", f)
+            val i = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(i, "Share"))
+        } catch (t: Throwable) {
+            mirror.frozen = false
+            Toast.makeText(this, "Could not share: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::mirror.isInitialized) mirror.frozen = false
     }
 
     private fun startCamera() {
