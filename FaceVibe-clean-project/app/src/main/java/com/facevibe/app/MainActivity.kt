@@ -101,6 +101,8 @@ class MainActivity : ComponentActivity() {
     private var tStart = 0L
     private var tAdd = false
     private lateinit var frozen: ImageView
+    private lateinit var mirror: MirrorView
+    private var mirrorOn = false
     private var voteNeed = 5
     private var dwellMs = 500L
     private var testMode = false
@@ -423,6 +425,9 @@ class MainActivity : ComponentActivity() {
         neutralId = exprs.list.firstOrNull { it.name == "Natural face" }?.id ?: 1
         findViewById<View>(R.id.teachBtn).setOnClickListener { teachMenu() }
         frozen = findViewById(R.id.frozen)
+        mirror = findViewById(R.id.mirror)
+        mirror.setOnClickListener { mirrorOn = false; mirror.visibility = View.GONE }
+        findViewById<View>(R.id.mirrorBtn).setOnClickListener { mirrorOn = true; mirror.visibility = View.VISIBLE }
         frozen.setOnClickListener { frozen.visibility = View.GONE }
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         findViewById<View>(R.id.shareBtn).setOnClickListener { sharePhoto() }
@@ -447,7 +452,8 @@ class MainActivity : ComponentActivity() {
         findViewById<View>(R.id.bFinish).setOnClickListener { finishTeach() }
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (teachOn) finishTeach() else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
+                if (mirrorOn) { mirrorOn = false; mirror.visibility = View.GONE }
+                else if (teachOn) finishTeach() else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
             }
         })
         try {
@@ -520,6 +526,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showFrame(f: FaceFrame) {
+        if (mirrorOn) mirror.update(if (f.hasFace) f.blend else emptyMap(), f.pose)
         frames++
         val now = SystemClock.uptimeMillis()
         if (lastFpsTime == 0L) lastFpsTime = now

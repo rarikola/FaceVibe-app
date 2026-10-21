@@ -103,6 +103,24 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/mirrorBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="92dp"
+        android:background="@drawable/bg_pill"
+        android:elevation="4dp"
+        android:paddingStart="18dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="10dp"
+        android:text="Mirror"
+        android:textColor="#1B1B1F"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <TextView
         android:id="@+id/shareBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -283,6 +301,13 @@
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
+
+    <com.facevibe.app.MirrorView
+        android:id="@+id/mirror"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="15dp"
+        android:visibility="gone" />
 
     <ImageView
         android:id="@+id/frozen"
