@@ -35,8 +35,8 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private val bg = Paint()
 
     fun debugText(): String =
-        "tongue model %.2f img %.2f | inside %.2f below %.2f bright %.0f | jaw %.2f".format(
-            g("tongueOut"), g("tongueOutImg"), g("dbgInside"), g("dbgBelow"), g("dbgBright"), g("jawOpen"))
+        "tongue %.2f below %.2f bright %.0f | teeth up %.2f low %.2f | jaw %.2f".format(
+            g("tongueOutImg"), g("dbgBelow"), g("dbgBright"), g("teethUp"), g("teethLow"), g("jawOpen"))
 
     fun update(blend: Map<String, Float>, pose: FloatArray?) {
         val keys = if (blend.isEmpty()) v.keys.toList() else blend.keys.toList()
@@ -57,6 +57,8 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
 
     var frozen = false
     private var tongueOn = false
+    private var upOn = false
+    private var lowOn = false
 
     private fun fold(a: Float): Float {
         var x = a
@@ -204,6 +206,9 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
         val tongue = if (tongueOn) tongueRaw.coerceAtLeast(0.4f) else 0f
 
         val xm = cx + shift
+        // teeth come from the camera picture (white pixels inside the opening), with on/off hysteresis
+        upOn = if (upOn) g("teethUp") > 0.25f else g("teethUp") > 0.5f
+        lowOn = if (lowOn) g("teethLow") > 0.25f else g("teethLow") > 0.5f
 
         // rounded lips ("Oh", "oo", kiss): a smooth oval, no teeth
         if (round > 0.35f && smile < 0.5f) {
@@ -235,11 +240,11 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
             path.close()
             fill.color = Color.parseColor("#7A1E1E")
             c.drawPath(path, fill)
-            // teeth only when the upper lip is lifted or the mouth is pulled wide
-            if (openH > r * 0.07f && (upper > 0.25f || smile > 0.35f || stretch > 0.3f)) {
+            if (openH > r * 0.05f && (upOn || lowOn)) {
                 c.save(); c.clipPath(path)
                 fill.color = Color.WHITE
-                c.drawRect(x0, min(y0, y1) - r * 0.2f, x1, midTop + min(openH * 0.35f, r * 0.14f), fill)
+                if (upOn) c.drawRect(x0, min(y0, y1) - r * 0.2f, x1, midTop + min(openH * 0.35f, r * 0.14f), fill)
+                if (lowOn) c.drawRect(x0, midTop + openH - min(openH * 0.35f, r * 0.12f), x1, midTop + openH * 1.4f + r * 0.05f, fill)
                 c.restore()
             }
             line.strokeWidth = r * 0.045f

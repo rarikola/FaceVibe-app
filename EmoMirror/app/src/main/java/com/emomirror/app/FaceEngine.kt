@@ -101,11 +101,13 @@ class FaceEngine(
             for (c in bs.get()[0]) map[c.categoryName()] = c.score()
             // the tracker's own tongueOut value is weak, so also look for tongue-coloured pixels below the lip
             val lmk = result.faceLandmarks()
-            val tg = if (lmk.isNotEmpty()) tongueScore(lmk[0], input, map["jawOpen"] ?: 0f) else floatArrayOf(0f, 0f, 0f)
+            val tg = if (lmk.isNotEmpty()) tongueScore(lmk[0], input, map["jawOpen"] ?: 0f) else floatArrayOf(0f, 0f, 0f, 0f, 0f)
             map["tongueOutImg"] = tg[0]
             map["dbgInside"] = tg[0]
             map["dbgBelow"] = tg[1]
             map["dbgBright"] = tg[2]
+            map["teethUp"] = tg[3]
+            map["teethLow"] = tg[4]
 
             var pose: FloatArray? = null
             val mats = result.facialTransformationMatrixes()
@@ -118,11 +120,11 @@ class FaceEngine(
 
     /**
      * Looks for a tongue inside the mouth opening: open mouths are dark inside, a tongue is bright pink,
-     * teeth are white. Returns [score 0..1, pink share below the lip, mean brightness inside] (for the debug line).
+     * teeth are white. Returns [tongue 0..1, pink below the lip, mean brightness inside, upper teeth 0..1, lower teeth 0..1].
      */
     private fun tongueScore(l: List<NormalizedLandmark>, input: MPImage, jaw: Float): FloatArray {
-        val none = floatArrayOf(0f, 0f, 0f)
-        if (jaw < 0.15f || l.size < 320) return none
+        val none = floatArrayOf(0f, 0f, 0f, 0f, 0f)
+        if (jaw < 0.10f || l.size < 320) return none
         val bmp = BitmapExtractor.extract(input)
         val w = bmp.width; val h = bmp.height
         val xl = l[78].x(); val xr = l[308].x()
@@ -154,7 +156,25 @@ class FaceEngine(
             }
         }
         val frac = hits / n.toFloat()
-        return floatArrayOf(((frac - 0.25f) / 0.35f).coerceIn(0f, 1f), below / maxOf(m, 1).toFloat(), bright / n)
+
+        // teeth: white, colourless pixels just under the upper lip / just above the lower lip
+        fun white(c: Int): Boolean {
+            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
+            return minOf(r, g, b) > 150 && (maxOf(r, g, b) - minOf(r, g, b)) < 45
+        }
+        fun band(f0: Float, f1: Float): Float {
+            var wn = 0; var tot = 0
+            for (i in 0 until 8) for (j in 0 until 3) {
+                val x = xa + (xb - xa) * i / 7f
+                val y = y13 + gap * (f0 + (f1 - f0) * j / 2f)
+                if (white(px(x, y))) wn++
+                tot++
+            }
+            return ((wn / tot.toFloat() - 0.15f) / 0.35f).coerceIn(0f, 1f)
+        }
+        val up = band(0.08f, 0.40f)
+        val low = band(0.60f, 0.92f)
+        return floatArrayOf(((frac - 0.25f) / 0.35f).coerceIn(0f, 1f), below / maxOf(m, 1).toFloat(), bright / n, up, low)
     }
 
     /** 4x4 column-major transform -> yaw/pitch/roll in degrees (signs verified on-device in M2). */
