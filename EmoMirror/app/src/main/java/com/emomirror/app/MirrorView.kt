@@ -34,6 +34,9 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private val white = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     private val bg = Paint()
 
+    fun debugText(): String =
+        "tongue model %.2f  image %.2f  jaw %.2f".format(g("tongueOut"), g("tongueOutImg"), g("jawOpen"))
+
     fun update(blend: Map<String, Float>, pose: FloatArray?) {
         val keys = if (blend.isEmpty()) v.keys.toList() else blend.keys.toList()
         for (k in keys) {
@@ -195,7 +198,9 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
         val x1 = cx + shift + halfW
         val y0 = y - sL * r * 0.22f + fL * r * 0.24f
         val y1 = y - sR * r * 0.22f + fR * r * 0.24f
-        val openH = jaw * r * 0.62f + funnel * r * 0.10f + upper * r * 0.10f * (1f - press)
+        val tongue = maxOf(b("tongueOut", 2f), b("tongueOutImg", 1f))
+        val openH = maxOf(jaw * r * 0.62f + funnel * r * 0.10f + upper * r * 0.10f * (1f - press),
+            if (tongue > 0.25f) r * 0.14f else 0f)
         val midTop = y + ((sL + sR) / 2f) * r * 0.10f - ((fL + fR) / 2f) * r * 0.14f - pucker * r * 0.03f
         val ctrlTop = 2f * midTop - (y0 + y1) / 2f
         val xm = cx + shift
@@ -217,6 +222,20 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
             }
             line.strokeWidth = r * 0.045f
             c.drawPath(path, line)
+            if (tongue > 0.25f) {
+                // tongue hangs over the lower lip, in front of it
+                val len = (0.10f + tongue * 0.26f) * r
+                val tw = halfW * 0.5f
+                val top = midTop + openH * 0.35f
+                val bottom = midTop + openH + len
+                val rect = RectF(xm - tw, top, xm + tw, bottom)
+                fill.color = Color.parseColor("#FF6F8E")
+                c.drawRoundRect(rect, tw, tw, fill)
+                line.strokeWidth = r * 0.03f
+                line.color = Color.parseColor("#D9456B")
+                c.drawLine(xm, midTop + openH, xm, bottom - tw * 0.55f, line)
+                line.color = Color.parseColor("#4A2A00")
+            }
         } else {
             line.strokeWidth = r * (0.05f + press * 0.02f)
             val p = Path()

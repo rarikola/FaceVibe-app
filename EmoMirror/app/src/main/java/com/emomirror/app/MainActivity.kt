@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var bottom: View
     private lateinit var analysisExecutor: ExecutorService
     private var engine: FaceEngine? = null
+    private var debug = false
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -76,6 +77,7 @@ class MainActivity : ComponentActivity() {
             }
             true
         }
+        findViewById<View>(R.id.appName).setOnClickListener { debug = !debug; status.visibility = if (debug) View.VISIBLE else View.GONE }
         findViewById<View>(R.id.captureBtn).setOnClickListener { capture() }
         findViewById<View>(R.id.shareBtn).setOnClickListener { share() }
 
@@ -169,7 +171,10 @@ class MainActivity : ComponentActivity() {
 
     private fun showFrame(f: FaceFrame) {
         mirror.update(if (f.hasFace) f.blend else emptyMap(), f.pose)
-        if (f.hasFace) {
+        if (debug) {
+            status.text = mirror.debugText()
+            status.visibility = View.VISIBLE
+        } else if (f.hasFace) {
             if (status.visibility != View.GONE) status.visibility = View.GONE
         } else {
             status.text = "No face"

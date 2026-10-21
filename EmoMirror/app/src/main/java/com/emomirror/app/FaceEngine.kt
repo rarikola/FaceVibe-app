@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.SystemClock
+import com.google.mediapipe.framework.image.BitmapExtractor
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.google.mediapipe.framework.image.BitmapImageBuilder
@@ -97,6 +99,9 @@ class FaceEngine(
             }
             val map = HashMap<String, Float>()
             for (c in bs.get()[0]) map[c.categoryName()] = c.score()
+            // the tracker's own tongueOut value is weak, so also look for tongue-coloured pixels below the lip
+            val lmk = result.faceLandmarks()
+            map["tongueOutImg"] = if (lmk.isNotEmpty()) tongueScore(lmk[0], input, map["jawOpen"] ?: 0f) else 0f
 
             var pose: FloatArray? = null
             val mats = result.facialTransformationMatrixes()
@@ -105,6 +110,38 @@ class FaceEngine(
         } catch (t: Throwable) {
             onError("${t.javaClass.simpleName}: ${t.message}")
         }
+    }
+
+    /**
+     * 0..1: how much of the area just below the lower lip is redder than the chin skin.
+     * Only counts when the mouth is open. A pink tongue sticking out shows up as extra red there.
+     */
+    private fun tongueScore(l: List<NormalizedLandmark>, input: MPImage, jaw: Float): Float {
+        if (jaw < 0.12f || l.size < 300) return 0f
+        val bmp = BitmapExtractor.extract(input)
+        val w = bmp.width; val h = bmp.height
+        val xl = l[61].x(); val xr = l[291].x()
+        val y17 = l[17].y(); val y152 = l[152].y()
+        if (xr - xl <= 0.01f || y152 - y17 <= 0.01f) return 0f
+        fun red(c: Int): Float = (((c shr 16) and 255) - ((c shr 8) and 255)) / (((c shr 16) and 255) + 1f)
+        fun bright(c: Int) = (c shr 16) and 255
+        val xa = xl + 0.25f * (xr - xl); val xb = xl + 0.75f * (xr - xl)
+        val dy = y152 - y17
+        fun grid(f0: Float, f1: Float): List<Int> {
+            val out = ArrayList<Int>()
+            for (i in 0 until 8) for (j in 0 until 6) {
+                val x = ((xa + (xb - xa) * i / 7f) * w).toInt().coerceIn(0, w - 1)
+                val y = ((y17 + dy * (f0 + (f1 - f0) * j / 5f)) * h).toInt().coerceIn(0, h - 1)
+                out.add(bmp.getPixel(x, y))
+            }
+            return out
+        }
+        val ref = grid(0.72f, 0.95f)
+        val refMean = ref.map { red(it) }.average().toFloat()
+        val t = grid(0.05f, 0.60f)
+        val hits = t.count { red(it) > refMean + 0.10f && bright(it) > 90 }
+        val frac = hits / t.size.toFloat()
+        return ((frac - 0.2f) / 0.4f).coerceIn(0f, 1f)
     }
 
     /** 4x4 column-major transform -> yaw/pitch/roll in degrees (signs verified on-device in M2). */
