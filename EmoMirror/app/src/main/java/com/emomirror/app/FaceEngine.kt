@@ -101,7 +101,11 @@ class FaceEngine(
             for (c in bs.get()[0]) map[c.categoryName()] = c.score()
             // the tracker's own tongueOut value is weak, so also look for tongue-coloured pixels below the lip
             val lmk = result.faceLandmarks()
-            map["tongueOutImg"] = if (lmk.isNotEmpty()) tongueScore(lmk[0], input, map["jawOpen"] ?: 0f) else 0f
+            val tg = if (lmk.isNotEmpty()) tongueScore(lmk[0], input, map["jawOpen"] ?: 0f) else floatArrayOf(0f, 0f, 0f)
+            map["tongueOutImg"] = tg[0]
+            map["dbgInside"] = tg[0]
+            map["dbgBelow"] = tg[1]
+            map["dbgBright"] = tg[2]
 
             var pose: FloatArray? = null
             val mats = result.facialTransformationMatrixes()
@@ -113,35 +117,44 @@ class FaceEngine(
     }
 
     /**
-     * 0..1: how much of the area just below the lower lip is redder than the chin skin.
-     * Only counts when the mouth is open. A pink tongue sticking out shows up as extra red there.
+     * Looks for a tongue inside the mouth opening: open mouths are dark inside, a tongue is bright pink,
+     * teeth are white. Returns [score 0..1, pink share below the lip, mean brightness inside] (for the debug line).
      */
-    private fun tongueScore(l: List<NormalizedLandmark>, input: MPImage, jaw: Float): Float {
-        if (jaw < 0.25f || l.size < 300) return 0f
+    private fun tongueScore(l: List<NormalizedLandmark>, input: MPImage, jaw: Float): FloatArray {
+        val none = floatArrayOf(0f, 0f, 0f)
+        if (jaw < 0.15f || l.size < 320) return none
         val bmp = BitmapExtractor.extract(input)
         val w = bmp.width; val h = bmp.height
-        val xl = l[61].x(); val xr = l[291].x()
-        val y17 = l[17].y(); val y152 = l[152].y()
-        if (xr - xl <= 0.01f || y152 - y17 <= 0.01f) return 0f
-        fun red(c: Int): Float = (((c shr 16) and 255) - ((c shr 8) and 255)) / (((c shr 16) and 255) + 1f)
-        fun bright(c: Int) = (c shr 16) and 255
-        val xa = xl + 0.25f * (xr - xl); val xb = xl + 0.75f * (xr - xl)
-        val dy = y152 - y17
-        fun grid(f0: Float, f1: Float): List<Int> {
-            val out = ArrayList<Int>()
-            for (i in 0 until 8) for (j in 0 until 6) {
-                val x = ((xa + (xb - xa) * i / 7f) * w).toInt().coerceIn(0, w - 1)
-                val y = ((y17 + dy * (f0 + (f1 - f0) * j / 5f)) * h).toInt().coerceIn(0, h - 1)
-                out.add(bmp.getPixel(x, y))
-            }
-            return out
+        val xl = l[78].x(); val xr = l[308].x()
+        val y13 = l[13].y(); val y14 = l[14].y(); val y17 = l[17].y(); val y152 = l[152].y()
+        if (xr - xl <= 0.01f || y14 - y13 <= 0.003f) return none
+        fun px(x: Float, y: Float) = bmp.getPixel((x * w).toInt().coerceIn(0, w - 1), (y * h).toInt().coerceIn(0, h - 1))
+        fun pink(c: Int): Boolean {
+            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
+            return r > 140 && (r - g) / (r + 1f) in 0.20f..0.65f && b > g * 1.03f
         }
-        val ref = grid(0.72f, 0.95f)
-        val refMean = ref.map { red(it) }.average().toFloat()
-        val t = grid(0.05f, 0.60f)
-        val hits = t.count { red(it) > refMean + 0.16f && bright(it) > 110 }
-        val frac = hits / t.size.toFloat()
-        return ((frac - 0.45f) / 0.35f).coerceIn(0f, 1f)
+        val xa = xl + 0.30f * (xr - xl); val xb = xl + 0.70f * (xr - xl)
+        val gap = y14 - y13
+        var hits = 0; var n = 0; var bright = 0f
+        for (i in 0 until 8) for (j in 0 until 6) {
+            val x = xa + (xb - xa) * i / 7f
+            val y = y13 + gap * 0.10f + gap * 1.05f * j / 5f
+            val c = px(x, y)
+            if (pink(c)) hits++
+            bright += ((c shr 16) and 255)
+            n++
+        }
+        var below = 0; var m = 0
+        if (y152 - y17 > 0.01f) {
+            for (i in 0 until 8) for (j in 0 until 4) {
+                val x = xa + (xb - xa) * i / 7f
+                val y = y17 + (y152 - y17) * (0.05f + 0.35f * j / 3f)
+                if (pink(px(x, y))) below++
+                m++
+            }
+        }
+        val frac = hits / n.toFloat()
+        return floatArrayOf(((frac - 0.25f) / 0.35f).coerceIn(0f, 1f), below / maxOf(m, 1).toFloat(), bright / n)
     }
 
     /** 4x4 column-major transform -> yaw/pitch/roll in degrees (signs verified on-device in M2). */

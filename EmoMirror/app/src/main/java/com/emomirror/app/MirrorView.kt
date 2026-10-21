@@ -35,7 +35,8 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private val bg = Paint()
 
     fun debugText(): String =
-        "tongue model %.2f  image %.2f  jaw %.2f".format(g("tongueOut"), g("tongueOutImg"), g("jawOpen"))
+        "tongue model %.2f img %.2f | inside %.2f below %.2f bright %.0f | jaw %.2f".format(
+            g("tongueOut"), g("tongueOutImg"), g("dbgInside"), g("dbgBelow"), g("dbgBright"), g("jawOpen"))
 
     fun update(blend: Map<String, Float>, pose: FloatArray?) {
         val keys = if (blend.isEmpty()) v.keys.toList() else blend.keys.toList()
@@ -194,20 +195,36 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
         val upper = b2("mouthUpperUpLeft", "mouthUpperUpRight", 1.8f)
         val press = b2("mouthPressLeft", "mouthPressRight", 2f)
         val shift = (g("mouthRight") - g("mouthLeft")) * r * 0.14f
-        val halfW = r * 0.34f * (1f + stretch * 0.25f + (sL + sR) * 0.12f - pucker * 0.55f - funnel * 0.35f)
-        val x0 = cx + shift - halfW
-        val x1 = cx + shift + halfW
-        val y0 = y - sL * r * 0.22f + fL * r * 0.24f
-        val y1 = y - sR * r * 0.22f + fR * r * 0.24f
+        val smile = (sL + sR) / 2f
+        val round = maxOf(funnel, pucker)
+
         val tongueRaw = maxOf(b("tongueOut", 1.2f), b("tongueOutImg", 1f))
         // on only for a strong signal, off only when it clearly fades (stops flicker and false alarms)
-        tongueOn = if (tongueOn) tongueRaw > 0.35f else tongueRaw > 0.65f
+        tongueOn = if (tongueOn) tongueRaw > 0.30f else tongueRaw > 0.55f
         val tongue = if (tongueOn) tongueRaw.coerceAtLeast(0.4f) else 0f
-        val openH = maxOf(jaw * r * 0.62f + funnel * r * 0.10f + upper * r * 0.10f * (1f - press),
-            if (tongue > 0.25f) r * 0.14f else 0f)
-        val midTop = y + ((sL + sR) / 2f) * r * 0.10f - ((fL + fR) / 2f) * r * 0.14f - pucker * r * 0.03f
-        val ctrlTop = 2f * midTop - (y0 + y1) / 2f
+
         val xm = cx + shift
+
+        // rounded lips ("Oh", "oo", kiss): a smooth oval, no teeth
+        if (round > 0.35f && smile < 0.5f) {
+            val rw = r * (0.10f + 0.07f * (1f - round) + stretch * 0.05f)
+            val rh = maxOf(r * 0.07f, jaw * r * 0.50f + funnel * r * 0.08f)
+            val oval = RectF(xm - rw, y - rh * 0.4f, xm + rw, y + rh * 1.2f)
+            fill.color = Color.parseColor("#7A1E1E")
+            c.drawOval(oval, fill)
+            line.strokeWidth = r * 0.05f
+            c.drawOval(oval, line)
+            return
+        }
+
+        val halfW = r * 0.34f * (1f + stretch * 0.25f + smile * 0.12f - pucker * 0.55f - funnel * 0.35f)
+        val x0 = xm - halfW
+        val x1 = xm + halfW
+        val y0 = y - sL * r * 0.22f + fL * r * 0.24f
+        val y1 = y - sR * r * 0.22f + fR * r * 0.24f
+        val openH = maxOf(jaw * r * 0.62f + upper * r * 0.10f * (1f - press), if (tongue > 0.25f) r * 0.14f else 0f)
+        val midTop = y + smile * r * 0.10f - ((fL + fR) / 2f) * r * 0.14f
+        val ctrlTop = 2f * midTop - (y0 + y1) / 2f
 
         if (openH > r * 0.04f) {
             val path = Path()
@@ -218,7 +235,8 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
             path.close()
             fill.color = Color.parseColor("#7A1E1E")
             c.drawPath(path, fill)
-            if (openH > r * 0.07f) {
+            // teeth only when the upper lip is lifted or the mouth is pulled wide
+            if (openH > r * 0.07f && (upper > 0.25f || smile > 0.35f || stretch > 0.3f)) {
                 c.save(); c.clipPath(path)
                 fill.color = Color.WHITE
                 c.drawRect(x0, min(y0, y1) - r * 0.2f, x1, midTop + min(openH * 0.35f, r * 0.14f), fill)
