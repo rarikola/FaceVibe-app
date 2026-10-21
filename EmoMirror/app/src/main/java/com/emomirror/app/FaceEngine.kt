@@ -117,7 +117,7 @@ class FaceEngine(
      * Only counts when the mouth is open. A pink tongue sticking out shows up as extra red there.
      */
     private fun tongueScore(l: List<NormalizedLandmark>, input: MPImage, jaw: Float): Float {
-        if (jaw < 0.12f || l.size < 300) return 0f
+        if (jaw < 0.25f || l.size < 300) return 0f
         val bmp = BitmapExtractor.extract(input)
         val w = bmp.width; val h = bmp.height
         val xl = l[61].x(); val xr = l[291].x()
@@ -139,9 +139,9 @@ class FaceEngine(
         val ref = grid(0.72f, 0.95f)
         val refMean = ref.map { red(it) }.average().toFloat()
         val t = grid(0.05f, 0.60f)
-        val hits = t.count { red(it) > refMean + 0.10f && bright(it) > 90 }
+        val hits = t.count { red(it) > refMean + 0.16f && bright(it) > 110 }
         val frac = hits / t.size.toFloat()
-        return ((frac - 0.2f) / 0.4f).coerceIn(0f, 1f)
+        return ((frac - 0.45f) / 0.35f).coerceIn(0f, 1f)
     }
 
     /** 4x4 column-major transform -> yaw/pitch/roll in degrees (signs verified on-device in M2). */

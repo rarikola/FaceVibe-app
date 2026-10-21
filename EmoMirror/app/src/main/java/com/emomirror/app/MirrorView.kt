@@ -55,6 +55,7 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     }
 
     var frozen = false
+    private var tongueOn = false
 
     private fun fold(a: Float): Float {
         var x = a
@@ -198,7 +199,10 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
         val x1 = cx + shift + halfW
         val y0 = y - sL * r * 0.22f + fL * r * 0.24f
         val y1 = y - sR * r * 0.22f + fR * r * 0.24f
-        val tongue = maxOf(b("tongueOut", 2f), b("tongueOutImg", 1f))
+        val tongueRaw = maxOf(b("tongueOut", 1.2f), b("tongueOutImg", 1f))
+        // on only for a strong signal, off only when it clearly fades (stops flicker and false alarms)
+        tongueOn = if (tongueOn) tongueRaw > 0.35f else tongueRaw > 0.65f
+        val tongue = if (tongueOn) tongueRaw.coerceAtLeast(0.4f) else 0f
         val openH = maxOf(jaw * r * 0.62f + funnel * r * 0.10f + upper * r * 0.10f * (1f - press),
             if (tongue > 0.25f) r * 0.14f else 0f)
         val midTop = y + ((sL + sR) / 2f) * r * 0.10f - ((fL + fR) / 2f) * r * 0.14f - pucker * r * 0.03f
