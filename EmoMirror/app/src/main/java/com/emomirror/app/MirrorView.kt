@@ -110,6 +110,7 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
                 lerp(Color.parseColor("#FFC93C"), Color.parseColor("#F0502D"), t),
                 lerp(Color.parseColor("#F2A516"), Color.parseColor("#C0281A"), t)),
             floatArrayOf(0f, 0.6f, 1f), Shader.TileMode.CLAMP)
+        fill.alpha = 255   // a see-through paint left over from the blush must not leak into the head
         c.drawCircle(cx, cy, r, fill)
         fill.shader = null
         line.strokeWidth = r * 0.035f

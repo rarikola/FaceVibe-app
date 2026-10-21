@@ -69,6 +69,7 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
         fill.shader = RadialGradient(cx - r * 0.3f, cy - r * 0.35f, r * 1.4f,
             intArrayOf(Color.parseColor("#FFE066"), Color.parseColor("#FFC93C"), Color.parseColor("#F2A516")),
             floatArrayOf(0f, 0.6f, 1f), Shader.TileMode.CLAMP)
+        fill.alpha = 255   // a see-through paint left over from the blush must not leak into the head
         c.drawCircle(cx, cy, r, fill)
         fill.shader = null
         line.strokeWidth = r * 0.035f
