@@ -57,6 +57,12 @@ class MainActivity : ComponentActivity() {
         feed = findViewById(R.id.feed)
         bottom = findViewById(R.id.bottom)
         previewView.scaleType = PreviewView.ScaleType.FILL_CENTER
+        // stop the phone's automatic dark mode from inverting our colours
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            window.decorView.isForceDarkAllowed = false
+            mirror.isForceDarkAllowed = false
+            previewView.isForceDarkAllowed = false
+        }
 
         val prefs = getSharedPreferences("em", MODE_PRIVATE)
         setSplit(prefs.getFloat("split", 0.5f))
