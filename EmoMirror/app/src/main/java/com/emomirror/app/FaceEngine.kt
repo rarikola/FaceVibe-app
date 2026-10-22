@@ -116,11 +116,10 @@ class FaceEngine(
             map["teethUp"] = m?.upper ?: 0f
             map["teethLow"] = m?.lower ?: 0f
             map["tongueOutImg"] = m?.tongue ?: 0f
-            map["dbgRed"] = m?.redShare ?: 0f
-            map["dbgWhite"] = m?.whiteShare ?: 0f
+            map["dbgFlesh"] = m?.fleshShare ?: 0f
+            map["dbgTeeth"] = m?.teethShare ?: 0f
             map["dbgN"] = (m?.count ?: 0).toFloat()
             map["dbgOpen"] = m?.openRatio ?: 0f
-            map["dbgWhiteShare"] = m?.whiteShare ?: 0f
 
             var pose: FloatArray? = null
             val mats = result.facialTransformationMatrixes()
@@ -133,48 +132,52 @@ class FaceEngine(
 
     class MouthLook(
         val upper: Float, val lower: Float, val tongue: Float,
-        val redShare: Float, val whiteShare: Float, val count: Int,
+        val fleshShare: Float, val teethShare: Float, val count: Int,
         val probe: FloatArray, val aspect: Float, val openRatio: Float
     )
 
     /**
-     * Reads the mouth opening straight from the camera picture.
+     * Reads the mouth opening straight from the camera picture, because the face tracker cannot
+     * see teeth or a tongue at all.
      *
-     * Everything is judged against the person's own lips in the same light, so it works for
-     * any skin tone, any teeth colour and any lighting:
-     *   - teeth  = far less red-over-green than the lips (cream and yellow both count)
-     *   - tongue = about as red-over-green as the lips
-     *   - gap    = dark
-     * Only points inside the inner-lip outline are read, so the lips themselves are never counted.
+     * Only the area inside the inner-lip outline is read, so the lips are never counted. Every point
+     * is judged by how much green it has next to its red:
+     *   - teeth  sit near 0.9  (white, cream and yellow all do)
+     *   - tongue sits near 0.6 (so do lips, which is why they are kept outside the outline)
+     *   - the gap is simply dark
+     * The gap between those two is wide and does not move with the light, since the camera's own
+     * white balance already takes the colour of the room out.
      */
     private fun mouthLook(l: List<NormalizedLandmark>, input: MPImage): MouthLook? {
         if (l.size < 468) return null
         val bmp = BitmapExtractor.extract(input)
         val w = bmp.width; val h = bmp.height
         val aspect = w / h.toFloat()
+        val empty = MouthLook(0f, 0f, 0f, 0f, 0f, 0, FloatArray(0), aspect, 0f)
+
+        // A shut mouth is a thin line: reading it would only ever sample lip.
+        val mouthW = l[308].x() - l[78].x()
+        val openRatio = if (mouthW > 0.001f) (l[14].y() - l[13].y()) / mouthW else 0f
+        if (openRatio < 0.13f) return MouthLook(0f, 0f, 0f, 0f, 0f, 0, FloatArray(0), aspect, openRatio)
+
         // MediaPipe's inner-lip ring, clockwise
         val ring = intArrayOf(78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95)
         val xs = FloatArray(ring.size); val ys = FloatArray(ring.size)
         for (i in ring.indices) { xs[i] = l[ring[i]].x(); ys[i] = l[ring[i]].y() }
-        // how far the lips are actually apart, next to how wide the mouth is.
-        // A shut mouth is a thin line: reading it would only ever sample lip.
-        val mouthW = l[308].x() - l[78].x()
-        val lipGap = l[14].y() - l[13].y()
-        val openRatio = if (mouthW > 0.001f) lipGap / mouthW else 0f
-        if (openRatio < 0.14f) return MouthLook(0f, 0f, 0f, 0f, 0f, 0, FloatArray(0), aspect, openRatio)
-
         var cx = 0f; var cy = 0f
         for (i in ring.indices) { cx += xs[i]; cy += ys[i] }
         cx /= ring.size; cy /= ring.size
-        // pull the outline in a little so the lip edge itself is never sampled
-        // the opening is far shorter than it is wide, so the top and bottom edges need pulling in harder
-        for (i in ring.indices) { xs[i] = cx + (xs[i] - cx) * 0.84f; ys[i] = cy + (ys[i] - cy) * 0.70f }
+        // pull the outline in so the lip edge itself is never sampled; the opening is wide and
+        // short, so the top and bottom need pulling in harder than the corners
+        for (i in ring.indices) { xs[i] = cx + (xs[i] - cx) * 0.84f; ys[i] = cy + (ys[i] - cy) * 0.72f }
         var x0 = 1f; var x1 = 0f; var y0 = 1f; var y1 = 0f
         for (i in ring.indices) {
-            if (xs[i] < x0) x0 = xs[i]; if (xs[i] > x1) x1 = xs[i]
-            if (ys[i] < y0) y0 = ys[i]; if (ys[i] > y1) y1 = ys[i]
+            if (xs[i] < x0) x0 = xs[i]
+            if (xs[i] > x1) x1 = xs[i]
+            if (ys[i] < y0) y0 = ys[i]
+            if (ys[i] > y1) y1 = ys[i]
         }
-        if (x1 - x0 < 0.01f || y1 - y0 < 0.004f) return null
+        if (x1 - x0 < 0.008f || y1 - y0 < 0.003f) return MouthLook(0f, 0f, 0f, 0f, 0f, 0, FloatArray(0), aspect, openRatio)
 
         fun inside(px: Float, py: Float): Boolean {
             var c = false
@@ -188,66 +191,58 @@ class FaceEngine(
         }
         fun pixel(px: Float, py: Float) =
             bmp.getPixel((px * w).toInt().coerceIn(0, w - 1), (py * h).toInt().coerceIn(0, h - 1))
-        /**
-         * How much more red than green a pixel is. This is what actually separates the parts of a mouth:
-         * teeth (cream or yellow) have almost none, lips and tongue have a lot, skin sits in between.
-         * Being a ratio, it barely moves when the light changes.
-         */
-        fun redness(c: Int): Float {
-            val r = (c shr 16) and 255; val g = (c shr 8) and 255
-            return if (r < 12) 0f else (r - g) / r.toFloat()
-        }
-        fun value(c: Int): Float = maxOf((c shr 16) and 255, maxOf((c shr 8) and 255, c and 255)) / 255f
 
-        // The lips are the right thing to measure against: same flesh as the tongue, same light,
-        // right next to the opening. Teeth are whatever is far less red than the lips.
-        var lipRed = 0f; var ln = 0
-        for (id in intArrayOf(61, 40, 37, 0, 267, 270, 291, 84, 17, 314)) {
-            val c = pixel(l[id].x(), l[id].y())
-            if (value(c) < 0.93f) { lipRed += redness(c); ln++ }
-        }
-        if (ln < 4) return MouthLook(0f, 0f, 0f, 0f, 0f, 0, FloatArray(0), aspect, openRatio)
-        lipRed /= ln
-        var skinVal = 0f
-        for (id in intArrayOf(50, 280)) skinVal += value(pixel(l[id].x(), l[id].y()))
-        skinVal /= 2f
-        val teethRed = lipRed * 0.50f
-        val fleshRed = lipRed * 0.72f
-        val darkVal = skinVal * 0.30f
-
-        val probe = ArrayList<Float>()
-        var upHit = 0; var upN = 0
-        var lowHit = 0; var lowN = 0
-        var red = 0; var n = 0
-        val steps = 14
+        // first pass: collect the points inside the opening and find the brightest of them
+        val steps = 20
+        val px = FloatArray(steps * steps); val py = FloatArray(steps * steps); val col = IntArray(steps * steps)
+        var n = 0
+        var maxV = 0
         for (i in 0 until steps) for (j in 0 until steps) {
-            val px = x0 + (x1 - x0) * (i + 0.5f) / steps
-            val py = y0 + (y1 - y0) * (j + 0.5f) / steps
-            if (!inside(px, py)) continue
-            val c = pixel(px, py)
-            val rg = redness(c); val v = value(c)
-            // A wet tongue catches the light and goes almost white, which looks exactly like a tooth.
-            // Those blown-out points say nothing, so they are left out of the count altogether.
-            if (v > 0.92f) { probe.add(px); probe.add(py); probe.add(3f); continue }
+            val x = x0 + (x1 - x0) * (i + 0.5f) / steps
+            val y = y0 + (y1 - y0) * (j + 0.5f) / steps
+            if (!inside(x, y)) continue
+            val c = pixel(x, y)
+            val v = maxOf((c shr 16) and 255, maxOf((c shr 8) and 255, c and 255))
+            if (v > maxV) maxV = v
+            px[n] = x; py[n] = y; col[n] = c; n++
+        }
+        if (n < 10) return MouthLook(0f, 0f, 0f, 0f, 0f, n, FloatArray(0), aspect, openRatio)
+
+        // second pass: sort each point into teeth, tongue or gap
+        val probe = FloatArray(n * 3)
+        var teeth = 0; var flesh = 0; var judged = 0
+        var upHit = 0; var upN = 0; var lowHit = 0; var lowN = 0
+        val darkV = maxV * 0.42f
+        val midY = (y0 + y1) / 2f
+        for (k in 0 until n) {
+            val c = col[k]
+            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
+            val v = maxOf(r, maxOf(g, b))
+            val gr = if (r < 10) 1f else g / r.toFloat()
             val kind = when {
-                v < darkVal -> 0                    // the gap and the throat
-                rg < teethRed -> 1                  // teeth, however yellow or shadowed
-                rg > fleshRed -> 2                  // tongue (the lips are outside the outline)
+                minOf(r, g, b) > 236 -> 3      // clipped to white: carries no colour, so it says nothing
+                v < darkV -> 0                 // the gap and the throat
+                gr > 0.80f -> 1                // teeth, however yellow
+                gr < 0.78f -> 2                // tongue
                 else -> 0
             }
-            n++
-            if (kind == 2) red++
-            if (py < cy) { upN++; if (kind == 1) upHit++ } else { lowN++; if (kind == 1) lowHit++ }
-            probe.add(px); probe.add(py); probe.add(kind.toFloat())
+            if (kind != 3) {
+                judged++
+                if (kind == 1) teeth++
+                if (kind == 2) flesh++
+                if (py[k] < midY) { upN++; if (kind == 1) upHit++ } else { lowN++; if (kind == 1) lowHit++ }
+            }
+            probe[k * 3] = px[k]; probe[k * 3 + 1] = py[k]; probe[k * 3 + 2] = kind.toFloat()
         }
-        if (n < 14) return MouthLook(0f, 0f, 0f, 0f, 0f, n, probe.toFloatArray(), aspect, openRatio)
-        fun sc(hit: Int, tot: Int) = if (tot < 5) 0f else ((hit / tot.toFloat() - 0.10f) / 0.28f).coerceIn(0f, 1f)
-        val redShare = red / n.toFloat()
-        val whiteShare = (upHit + lowHit) / n.toFloat()
-        // a tongue fills much of the opening with red; a thin red rim is just lip left over
-        val tongue = ((redShare - 0.40f) / 0.25f).coerceIn(0f, 1f)
-        return MouthLook(sc(upHit, upN), sc(lowHit, lowN), tongue, redShare, whiteShare, n,
-            probe.toFloatArray(), aspect, openRatio)
+        if (judged < 8) return MouthLook(0f, 0f, 0f, 0f, 0f, judged, probe, aspect, openRatio)
+
+        fun sc(hit: Int, tot: Int) = if (tot < 4) 0f else ((hit / tot.toFloat() - 0.12f) / 0.28f).coerceIn(0f, 1f)
+        val fleshShare = flesh / judged.toFloat()
+        val teethShare = teeth / judged.toFloat()
+        // a tongue fills the opening; a sliver of inner lip does not
+        val tongue = ((fleshShare - 0.50f) / 0.25f).coerceIn(0f, 1f)
+        return MouthLook(sc(upHit, upN), sc(lowHit, lowN), tongue, fleshShare, teethShare, judged,
+            probe, aspect, openRatio)
     }
 
     /** 4x4 column-major transform -> yaw/pitch/roll in degrees (signs verified on-device in M2). */

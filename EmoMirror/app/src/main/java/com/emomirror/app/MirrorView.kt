@@ -35,8 +35,8 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private val bg = Paint()
 
     fun debugText(): String =
-        "teeth up %.2f low %.2f white %.2f | tongue %.2f red %.2f | pts %.0f open %.2f".format(
-            g("teethUp"), g("teethLow"), g("dbgWhiteShare"), g("tongueOutImg"), g("dbgRed"), g("dbgN"), g("dbgOpen"))
+        "teeth up %.2f low %.2f | tongue %.2f | shares teeth %.2f flesh %.2f | pts %.0f open %.2f".format(
+            g("teethUp"), g("teethLow"), g("tongueOutImg"), g("dbgTeeth"), g("dbgFlesh"), g("dbgN"), g("dbgOpen"))
 
     fun update(blend: Map<String, Float>, pose: FloatArray?) {
         val keys = if (blend.isEmpty()) v.keys.toList() else blend.keys.toList()
