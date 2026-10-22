@@ -119,6 +119,7 @@ class FaceEngine(
             map["dbgRed"] = m?.redShare ?: 0f
             map["dbgWhite"] = m?.whiteShare ?: 0f
             map["dbgN"] = (m?.count ?: 0).toFloat()
+            map["dbgOpen"] = m?.openRatio ?: 0f
 
             var pose: FloatArray? = null
             val mats = result.facialTransformationMatrixes()
@@ -132,7 +133,7 @@ class FaceEngine(
     class MouthLook(
         val upper: Float, val lower: Float, val tongue: Float,
         val redShare: Float, val whiteShare: Float, val count: Int,
-        val probe: FloatArray, val aspect: Float
+        val probe: FloatArray, val aspect: Float, val openRatio: Float
     )
 
     /**
@@ -154,11 +155,19 @@ class FaceEngine(
         val ring = intArrayOf(78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95)
         val xs = FloatArray(ring.size); val ys = FloatArray(ring.size)
         for (i in ring.indices) { xs[i] = l[ring[i]].x(); ys[i] = l[ring[i]].y() }
+        // how far the lips are actually apart, next to how wide the mouth is.
+        // A shut mouth is a thin line: reading it would only ever sample lip.
+        val mouthW = l[308].x() - l[78].x()
+        val lipGap = l[14].y() - l[13].y()
+        val openRatio = if (mouthW > 0.001f) lipGap / mouthW else 0f
+        if (openRatio < 0.14f) return MouthLook(0f, 0f, 0f, 0f, 0f, 0, FloatArray(0), aspect, openRatio)
+
         var cx = 0f; var cy = 0f
         for (i in ring.indices) { cx += xs[i]; cy += ys[i] }
         cx /= ring.size; cy /= ring.size
         // pull the outline in a little so the lip edge itself is never sampled
-        for (i in ring.indices) { xs[i] = cx + (xs[i] - cx) * 0.80f; ys[i] = cy + (ys[i] - cy) * 0.80f }
+        // the opening is far shorter than it is wide, so the top and bottom edges need pulling in harder
+        for (i in ring.indices) { xs[i] = cx + (xs[i] - cx) * 0.82f; ys[i] = cy + (ys[i] - cy) * 0.60f }
         var x0 = 1f; var x1 = 0f; var y0 = 1f; var y1 = 0f
         for (i in ring.indices) {
             if (xs[i] < x0) x0 = xs[i]; if (xs[i] > x1) x1 = xs[i]
@@ -219,14 +228,14 @@ class FaceEngine(
             if (py < cy) { upN++; if (kind == 1) upHit++ } else { lowN++; if (kind == 1) lowHit++ }
             probe.add(px); probe.add(py); probe.add(kind.toFloat())
         }
-        if (n < 8) return null
+        if (n < 14) return MouthLook(0f, 0f, 0f, 0f, 0f, n, probe.toFloatArray(), aspect, openRatio)
         fun sc(hit: Int, tot: Int) = if (tot < 4) 0f else ((hit / tot.toFloat() - 0.12f) / 0.30f).coerceIn(0f, 1f)
         val redShare = red / n.toFloat()
         val whiteShare = (upHit + lowHit) / n.toFloat()
         // a tongue fills much of the opening with red; a thin red rim is just lip left over
         val tongue = ((redShare - 0.35f) / 0.30f).coerceIn(0f, 1f)
         return MouthLook(sc(upHit, upN), sc(lowHit, lowN), tongue, redShare, whiteShare, n,
-            probe.toFloatArray(), aspect)
+            probe.toFloatArray(), aspect, openRatio)
     }
 
     /** 4x4 column-major transform -> yaw/pitch/roll in degrees (signs verified on-device in M2). */

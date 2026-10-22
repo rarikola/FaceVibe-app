@@ -35,15 +35,19 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private val bg = Paint()
 
     fun debugText(): String =
-        "teeth up %.2f low %.2f | tongue %.2f (red %.2f white %.2f pts %.0f) | jaw %.2f".format(
-            g("teethUp"), g("teethLow"), g("tongueOutImg"), g("dbgRed"), g("dbgWhite"), g("dbgN"), g("jawOpen"))
+        "teeth up %.2f low %.2f | tongue %.2f red %.2f | pts %.0f open %.2f jaw %.2f".format(
+            g("teethUp"), g("teethLow"), g("tongueOutImg"), g("dbgRed"), g("dbgN"), g("dbgOpen"), g("jawOpen"))
 
     fun update(blend: Map<String, Float>, pose: FloatArray?) {
         val keys = if (blend.isEmpty()) v.keys.toList() else blend.keys.toList()
         for (k in keys) {
             val target = blend[k] ?: 0f
             val old = v[k] ?: 0f
-            val a = if (k.startsWith("eyeBlink")) 0.75f else 0.55f
+            val a = when {
+                k.startsWith("eyeBlink") -> 0.75f
+                k == "teethUp" || k == "teethLow" || k == "tongueOutImg" -> 0.30f  // steadier: these come from pixels
+                else -> 0.55f
+            }
             v[k] = old + a * (target - old)
         }
         // the tracker can report a head angle as 178 instead of -2 (same pose, turned half a circle);
