@@ -123,7 +123,7 @@ class MainActivity : ComponentActivity() {
             1 -> { phase("Show me your teeth", false); if (el > 1800) { calStep = 2; calStart = now; calVals.clear() } }
             2 -> {
                 phase("Show me your teeth", true)
-                if (open && gr > 0f) calVals.add(gr)
+                if (open && gr != 0f) calVals.add(gr)
                 if (el > 2500) {
                     calTeeth = median(calVals)
                     calStep = 3; calStart = now; calVals.clear()
@@ -132,15 +132,17 @@ class MainActivity : ComponentActivity() {
             3 -> { phase("Now stick your tongue out", false); if (el > 1800) { calStep = 4; calStart = now; calVals.clear() } }
             4 -> {
                 phase("Now stick your tongue out", true)
-                if (open && gr > 0f) calVals.add(gr)
+                if (open && gr != 0f) calVals.add(gr)
                 if (el > 2500) {
                     val tongue = median(calVals)
                     calStep = 0
-                    if (calTeeth > 0f && tongue > 0f && calTeeth - tongue > 0.03f) {
-                        val cut = (calTeeth + tongue) / 2f
-                        engine?.grCut = cut
-                        getSharedPreferences("em", MODE_PRIVATE).edit().putFloat("grCut", cut).apply()
-                        Toast.makeText(this, "Set up — teeth %.2f, tongue %.2f".format(calTeeth, tongue), Toast.LENGTH_LONG).show()
+                    // both were measured against the lips in their own frame, so what is stored
+                    // is a margin above the lips, not a colour — it survives a change of light
+                    if (calTeeth - tongue > 0.05f) {
+                        val margin = (calTeeth + tongue) / 2f
+                        engine?.teethMargin = margin
+                        getSharedPreferences("em", MODE_PRIVATE).edit().putFloat("teethMargin", margin).apply()
+                        Toast.makeText(this, "Set up — teeth sit %.2f above your lips, tongue %.2f".format(calTeeth, tongue), Toast.LENGTH_LONG).show()
                     } else {
                         Toast.makeText(this, "Could not tell them apart — try again in better light", Toast.LENGTH_LONG).show()
                     }
@@ -151,7 +153,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun median(v: List<Float>): Float {
-        if (v.size < 5) return 0f
+        if (v.size < 5) return -9f
         val s = v.sorted(); return s[s.size / 2]
     }
 
@@ -214,7 +216,7 @@ class MainActivity : ComponentActivity() {
                     onError = { msg -> runOnUiThread { status.text = "Error: $msg" } }
                 )
                 engine = eng
-                eng.grCut = getSharedPreferences("em", MODE_PRIVATE).getFloat("grCut", 0.70f)
+                eng.teethMargin = getSharedPreferences("em", MODE_PRIVATE).getFloat("teethMargin", 0.22f)
                 val preview = Preview.Builder().build()
                     .also { it.setSurfaceProvider(previewView.surfaceProvider) }
                 val analysis = ImageAnalysis.Builder()

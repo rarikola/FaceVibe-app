@@ -144,19 +144,23 @@ class FaceEngine(
      * Only the area inside the inner-lip outline is read, so the lips are never counted. Every point
      * is judged by how much green it has next to its red, and by how colourful it is. Measured off
      * real camera frames:
-     *   - teeth  green/red 0.80..0.88, barely colourful (about 0.22)
-     *   - tongue green/red 0.60..0.66, colourful (about 0.37)
-     *   - lips   green/red 0.50..0.60, very colourful (and kept outside the outline anyway)
+     *   - teeth  are far less red than the lips
+     *   - tongue is the same flesh as the lips, so it reads like them
      *   - the gap is simply dark
-     * The line between teeth and tongue therefore sits at 0.73, and does not move with the light,
-     * because the camera's own white balance already takes the colour of the room out.
+     * Nothing is compared against a fixed colour. Everything is compared against this person's own
+     * lips in this same frame, so when the light changes, lips and mouth move together and the
+     * line between them stays where it was.
      *
      * The colours are then read as shapes, row by row, because where a thing sits matters as much
      * as its colour: teeth are an unbroken block of rows against a lip, while a tongue fills the
      * whole opening and an open mouth without one has a dark hole down its middle.
      */
-    /** Where the line between teeth and tongue sits. The short set-up moves it to fit this person. */
-    @Volatile var grCut = 0.70f
+    /**
+     * How much less red than the person's own lips a point must be before it counts as a tooth.
+     * A margin, not a fixed colour, so a change of light moves the lips and the mouth together
+     * and the line between them stays put. The short set-up fits it to this person's mouth.
+     */
+    @Volatile var teethMargin = 0.22f
 
     private fun mouthLook(l: List<NormalizedLandmark>, input: MPImage): MouthLook? {
         if (l.size < 468) return null
@@ -202,6 +206,27 @@ class FaceEngine(
         fun pixel(px: Float, py: Float) =
             bmp.getPixel((px * w).toInt().coerceIn(0, w - 1), (py * h).toInt().coerceIn(0, h - 1))
 
+        /** Low for flesh, high for teeth. A ratio, so it barely moves when the light does. */
+        fun score(c: Int): Float {
+            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
+            val v = maxOf(r, maxOf(g, b))
+            val gr = if (r < 10) 1f else g / r.toFloat()
+            val sat = if (v == 0) 0f else (v - minOf(r, minOf(g, b))) / v.toFloat()
+            return gr - 0.25f * sat
+        }
+
+        // The lips: the same flesh as the tongue, under the same light, a few millimetres away.
+        // Everything inside the mouth is judged against them, so the lighting cancels out.
+        val lipIds = intArrayOf(61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185)
+        val lipScores = FloatArray(lipIds.size)
+        for (i in lipIds.indices) {
+            val lx = l[lipIds[i]].x(); val ly = l[lipIds[i]].y()
+            lipScores[i] = score(pixel(lx + (cx - lx) * 0.35f, ly + (cy - ly) * 0.35f))
+        }
+        java.util.Arrays.sort(lipScores)
+        val lipRef = lipScores[lipScores.size / 2]
+        val cut = lipRef + teethMargin
+
         // Sample a square grid over the opening, keeping where each point sat, so the shapes
         // can be read and not just the colours.
         val steps = 20
@@ -232,15 +257,15 @@ class FaceEngine(
             val v = maxOf(r, maxOf(g, b))
             val gr = if (r < 10) 1f else g / r.toFloat()
             val sat = if (v == 0) 0f else (v - minOf(r, minOf(g, b))) / v.toFloat()
-            // One line, no gap: everything that is not dark is either teeth or tongue. A gap here
-            // means that in some lighting every point lands in it and the whole reading goes blank.
+            // One line, no gap: everything that is not dark is either teeth or tongue.
+            val sc = gr - 0.25f * sat
             cls[k] = when {
                 minOf(r, minOf(g, b)) > 240 -> 3  // clipped to white: no colour left, says nothing
                 v < darkV -> 0                    // the gap and the throat
-                gr - 0.25f * sat >= grCut -> 1    // teeth
-                else -> 2                         // tongue
+                sc >= cut -> 1                    // much less red than the lips: teeth
+                else -> 2                         // as red as the lips: tongue
             }
-            if (cls[k] != 3) grs[grN++] = gr - 0.25f * sat
+            if (cls[k] != 3) grs[grN++] = sc
         }
 
         // Row by row. Teeth form one unbroken block of rows; a tongue makes nearly every row
@@ -267,16 +292,18 @@ class FaceEngine(
         }
         if (validRows < 6) return MouthLook(0f, 0f, 0f, 0f, 0f, n, FloatArray(0), aspect, openRatio)
 
-        val midRow = (firstRow + lastRow) / 2
         var upper = 0f; var lower = 0f; var bestBand = 0
         var runStart = -1; var runSum = 0f; var runLen = 0
+        // Teeth hang off a lip. A band floating in the middle of the opening, touching neither
+        // edge, is not teeth however white it looks — that shape rule is what the colour alone
+        // could never give, and it holds whatever the light is doing.
         fun closeRun(endRow: Int) {
             if (runLen >= 2) {
                 if (runLen > bestBand) bestBand = runLen
                 val cover = runSum / runLen
                 val score = (runLen / 4f).coerceAtMost(1f) * ((cover - 0.45f) / 0.25f).coerceIn(0f, 1f)
-                if (runStart <= midRow) upper = maxOf(upper, score)
-                if (endRow >= midRow) lower = maxOf(lower, score)
+                if (runStart <= firstRow + 2) upper = maxOf(upper, score)
+                if (endRow >= lastRow - 2) lower = maxOf(lower, score)
             }
             runStart = -1; runSum = 0f; runLen = 0
         }
@@ -292,7 +319,7 @@ class FaceEngine(
 
         // the middle value, used by the short set-up that learns this person's own mouth
         var grMid = 0f
-        if (grN > 0) { java.util.Arrays.sort(grs, 0, grN); grMid = grs[grN / 2] }
+        if (grN > 0) { java.util.Arrays.sort(grs, 0, grN); grMid = grs[grN / 2] - lipRef }
 
         val fleshRowShare = fleshRows / validRows.toFloat()
         val tongue = ((fleshRowShare - 0.55f) / 0.25f).coerceIn(0f, 1f)

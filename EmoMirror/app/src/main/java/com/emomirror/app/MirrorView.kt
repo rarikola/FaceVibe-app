@@ -37,7 +37,7 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private val bg = Paint()
 
     fun debugText(): String =
-        "teeth %.2f/%.2f tongue %.2f | band %.2f rows %.2f | g/r %.2f pts %.0f open %.2f".format(
+        "teeth %.2f/%.2f tongue %.2f | band %.2f rows %.2f | vs lips %+.2f | pts %.0f open %.2f".format(
             g("teethUp"), g("teethLow"), g("tongueOutImg"), g("dbgBand"), g("dbgFlesh"),
             g("dbgGr"), g("dbgN"), g("dbgOpen"))
 
