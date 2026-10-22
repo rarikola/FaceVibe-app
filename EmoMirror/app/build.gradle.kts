@@ -21,8 +21,8 @@ android {
         applicationId = "com.emomirror.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 19
-        versionName = "2.1"
+        versionCode = 20
+        versionName = "2.1.1"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 

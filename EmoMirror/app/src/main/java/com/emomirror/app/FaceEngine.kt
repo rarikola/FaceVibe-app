@@ -217,11 +217,17 @@ class FaceEngine(
 
         // The lips: the same flesh as the tongue, under the same light, a few millimetres away.
         // Everything inside the mouth is judged against them, so the lighting cancels out.
-        val lipIds = intArrayOf(61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185)
-        val lipScores = FloatArray(lipIds.size)
-        for (i in lipIds.indices) {
-            val lx = l[lipIds[i]].x(); val ly = l[lipIds[i]].y()
-            lipScores[i] = score(pixel(lx + (cx - lx) * 0.35f, ly + (cy - ly) * 0.35f))
+        // Each sample is the midpoint between the outer and inner edge of the lip, which is lip
+        // flesh whether the mouth is open or shut. (Pulling the outer edge toward the middle of
+        // the mouth instead lands inside the opening once the mouth opens, and then the mouth is
+        // being compared against itself.)
+        val lipPairs = intArrayOf(
+            61, 78, 185, 191, 40, 80, 39, 81, 37, 82, 0, 13, 267, 312, 269, 311, 270, 310, 409, 415, 291, 308,
+            146, 95, 91, 88, 181, 178, 84, 87, 17, 14, 314, 317, 405, 402, 321, 318, 375, 324)
+        val lipScores = FloatArray(lipPairs.size / 2)
+        for (i in lipScores.indices) {
+            val o = l[lipPairs[i * 2]]; val inn = l[lipPairs[i * 2 + 1]]
+            lipScores[i] = score(pixel((o.x() + inn.x()) / 2f, (o.y() + inn.y()) / 2f))
         }
         java.util.Arrays.sort(lipScores)
         val lipRef = lipScores[lipScores.size / 2]
