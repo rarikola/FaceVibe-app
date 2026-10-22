@@ -36,7 +36,8 @@ class ProbeView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = n
             val y = oy + a[i + 1] * dh
             p.color = when (a[i + 2].toInt()) {
                 1 -> Color.parseColor("#00E5FF")   // read as teeth
-                2 -> Color.parseColor("#FF2D7A")   // read as tongue or lip
+                2 -> Color.parseColor("#FF2D7A")   // read as tongue
+                3 -> Color.parseColor("#FFD400")   // too shiny to judge, ignored
                 else -> Color.parseColor("#80FFFFFF") // read as dark
             }
             c.drawCircle(x, y, 4f * resources.displayMetrics.density, p)

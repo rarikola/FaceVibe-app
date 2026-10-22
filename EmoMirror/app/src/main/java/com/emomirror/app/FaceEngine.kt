@@ -120,6 +120,7 @@ class FaceEngine(
             map["dbgWhite"] = m?.whiteShare ?: 0f
             map["dbgN"] = (m?.count ?: 0).toFloat()
             map["dbgOpen"] = m?.openRatio ?: 0f
+            map["dbgWhiteShare"] = m?.whiteShare ?: 0f
 
             var pose: FloatArray? = null
             val mats = result.facialTransformationMatrixes()
@@ -139,10 +140,10 @@ class FaceEngine(
     /**
      * Reads the mouth opening straight from the camera picture.
      *
-     * Everything is judged against the person's own cheek skin in the same light, so it works for
+     * Everything is judged against the person's own lips in the same light, so it works for
      * any skin tone, any teeth colour and any lighting:
-     *   - teeth  = far less red-over-green than skin, and not dark (cream and yellow both count)
-     *   - tongue = far more red-over-green than skin
+     *   - teeth  = far less red-over-green than the lips (cream and yellow both count)
+     *   - tongue = about as red-over-green as the lips
      *   - gap    = dark
      * Only points inside the inner-lip outline are read, so the lips themselves are never counted.
      */
@@ -198,15 +199,20 @@ class FaceEngine(
         }
         fun value(c: Int): Float = maxOf((c shr 16) and 255, maxOf((c shr 8) and 255, c and 255)) / 255f
 
-        // the person's own skin, in this light: both cheeks
-        var skinRed = 0f; var skinVal = 0f; var sn = 0
-        for (id in intArrayOf(50, 101, 117, 280, 330, 346)) {
+        // The lips are the right thing to measure against: same flesh as the tongue, same light,
+        // right next to the opening. Teeth are whatever is far less red than the lips.
+        var lipRed = 0f; var ln = 0
+        for (id in intArrayOf(61, 40, 37, 0, 267, 270, 291, 84, 17, 314)) {
             val c = pixel(l[id].x(), l[id].y())
-            skinRed += redness(c); skinVal += value(c); sn++
+            if (value(c) < 0.93f) { lipRed += redness(c); ln++ }
         }
-        skinRed /= sn; skinVal /= sn
-        val teethRed = skinRed * 0.65f               // teeth: far less red-over-green than skin
-        val fleshRed = maxOf(skinRed * 1.30f, 0.26f) // lip and tongue: much more
+        if (ln < 4) return MouthLook(0f, 0f, 0f, 0f, 0f, 0, FloatArray(0), aspect, openRatio)
+        lipRed /= ln
+        var skinVal = 0f
+        for (id in intArrayOf(50, 280)) skinVal += value(pixel(l[id].x(), l[id].y()))
+        skinVal /= 2f
+        val teethRed = lipRed * 0.50f
+        val fleshRed = lipRed * 0.72f
         val darkVal = skinVal * 0.30f
 
         val probe = ArrayList<Float>()
@@ -220,10 +226,13 @@ class FaceEngine(
             if (!inside(px, py)) continue
             val c = pixel(px, py)
             val rg = redness(c); val v = value(c)
+            // A wet tongue catches the light and goes almost white, which looks exactly like a tooth.
+            // Those blown-out points say nothing, so they are left out of the count altogether.
+            if (v > 0.92f) { probe.add(px); probe.add(py); probe.add(3f); continue }
             val kind = when {
                 v < darkVal -> 0                    // the gap and the throat
-                rg < teethRed && v > skinVal * 0.33f -> 1   // teeth, however yellow or shadowed
-                rg > fleshRed -> 2                  // tongue (lips are outside the outline)
+                rg < teethRed -> 1                  // teeth, however yellow or shadowed
+                rg > fleshRed -> 2                  // tongue (the lips are outside the outline)
                 else -> 0
             }
             n++
@@ -236,7 +245,7 @@ class FaceEngine(
         val redShare = red / n.toFloat()
         val whiteShare = (upHit + lowHit) / n.toFloat()
         // a tongue fills much of the opening with red; a thin red rim is just lip left over
-        val tongue = ((redShare - 0.45f) / 0.25f).coerceIn(0f, 1f)
+        val tongue = ((redShare - 0.40f) / 0.25f).coerceIn(0f, 1f)
         return MouthLook(sc(upHit, upN), sc(lowHit, lowN), tongue, redShare, whiteShare, n,
             probe.toFloatArray(), aspect, openRatio)
     }
