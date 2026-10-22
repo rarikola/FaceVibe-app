@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var analysisExecutor: ExecutorService
     private var engine: FaceEngine? = null
     private var debug = false
+    private lateinit var probe: ProbeView
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -54,6 +55,7 @@ class MainActivity : ComponentActivity() {
         previewView = findViewById(R.id.previewView)
         mirror = findViewById(R.id.mirror)
         status = findViewById(R.id.status)
+        probe = findViewById(R.id.probe)
         root = findViewById(R.id.root)
         feed = findViewById(R.id.feed)
         bottom = findViewById(R.id.bottom)
@@ -77,7 +79,11 @@ class MainActivity : ComponentActivity() {
             }
             true
         }
-        findViewById<View>(R.id.appName).setOnClickListener { debug = !debug; status.visibility = if (debug) View.VISIBLE else View.GONE }
+        findViewById<View>(R.id.appName).setOnClickListener {
+            debug = !debug
+            probe.on = debug
+            status.visibility = if (debug) View.VISIBLE else View.GONE
+        }
         findViewById<View>(R.id.captureBtn).setOnClickListener { capture() }
         findViewById<View>(R.id.shareBtn).setOnClickListener { share() }
 
@@ -171,6 +177,7 @@ class MainActivity : ComponentActivity() {
 
     private fun showFrame(f: FaceFrame) {
         mirror.update(if (f.hasFace) f.blend else emptyMap(), f.pose)
+        probe.update(if (f.hasFace) f.probe else null, f.srcAspect)
         if (debug) {
             status.text = mirror.debugText()
             status.visibility = View.VISIBLE

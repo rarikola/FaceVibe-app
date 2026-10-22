@@ -19,7 +19,18 @@ import kotlin.math.asin
 import kotlin.math.atan2
 
 /** One analysed frame. pose = [yaw, pitch, roll] in degrees, or null. */
-class FaceFrame(val hasFace: Boolean, val blend: Map<String, Float>, val pose: FloatArray?)
+/**
+ * One analysed frame. pose = [yaw, pitch, roll] in degrees, or null.
+ * probe = the points sampled inside the mouth, as x, y, kind triples (kind: 0 dark, 1 teeth, 2 red),
+ * with x and y as fractions of the analysed picture. srcAspect = that picture's width / height.
+ */
+class FaceFrame(
+    val hasFace: Boolean,
+    val blend: Map<String, Float>,
+    val pose: FloatArray?,
+    val probe: FloatArray? = null,
+    val srcAspect: Float = 0f
+)
 
 /**
  * On-device face analysis: CameraX frames -> MediaPipe Face Landmarker (LIVE_STREAM).
@@ -99,82 +110,123 @@ class FaceEngine(
             }
             val map = HashMap<String, Float>()
             for (c in bs.get()[0]) map[c.categoryName()] = c.score()
-            // the tracker's own tongueOut value is weak, so also look for tongue-coloured pixels below the lip
+            // the tracker cannot see teeth or a tongue at all, so read them from the picture itself
             val lmk = result.faceLandmarks()
-            val tg = if (lmk.isNotEmpty()) tongueScore(lmk[0], input, map["jawOpen"] ?: 0f) else floatArrayOf(0f, 0f, 0f, 0f, 0f)
-            map["tongueOutImg"] = tg[0]
-            map["dbgInside"] = tg[0]
-            map["dbgBelow"] = tg[1]
-            map["dbgBright"] = tg[2]
-            map["teethUp"] = tg[3]
-            map["teethLow"] = tg[4]
+            val m = if (lmk.isNotEmpty()) mouthLook(lmk[0], input) else null
+            map["teethUp"] = m?.upper ?: 0f
+            map["teethLow"] = m?.lower ?: 0f
+            map["tongueOutImg"] = m?.tongue ?: 0f
+            map["dbgRed"] = m?.redShare ?: 0f
+            map["dbgWhite"] = m?.whiteShare ?: 0f
+            map["dbgN"] = (m?.count ?: 0).toFloat()
 
             var pose: FloatArray? = null
             val mats = result.facialTransformationMatrixes()
             if (mats.isPresent && mats.get().isNotEmpty()) pose = headPose(mats.get()[0])
-            onFrame(FaceFrame(true, map, pose))
+            onFrame(FaceFrame(true, map, pose, m?.probe, m?.aspect ?: 0f))
         } catch (t: Throwable) {
             onError("${t.javaClass.simpleName}: ${t.message}")
         }
     }
 
+    class MouthLook(
+        val upper: Float, val lower: Float, val tongue: Float,
+        val redShare: Float, val whiteShare: Float, val count: Int,
+        val probe: FloatArray, val aspect: Float
+    )
+
     /**
-     * Looks for a tongue inside the mouth opening: open mouths are dark inside, a tongue is bright pink,
-     * teeth are white. Returns [tongue 0..1, pink below the lip, mean brightness inside, upper teeth 0..1, lower teeth 0..1].
+     * Reads the mouth opening straight from the camera picture.
+     *
+     * Everything is judged against the person's own cheek skin in the same light, so it works for
+     * any skin tone, any teeth colour and any lighting:
+     *   - teeth  = much less colourful than skin, and not dark  (cream and yellow count as white)
+     *   - tongue = more colourful and redder than skin
+     *   - gap    = dark
+     * Only points inside the inner-lip outline are read, so the lips themselves are never counted.
      */
-    private fun tongueScore(l: List<NormalizedLandmark>, input: MPImage, jaw: Float): FloatArray {
-        val none = floatArrayOf(0f, 0f, 0f, 0f, 0f)
-        if (jaw < 0.10f || l.size < 320) return none
+    private fun mouthLook(l: List<NormalizedLandmark>, input: MPImage): MouthLook? {
+        if (l.size < 468) return null
         val bmp = BitmapExtractor.extract(input)
         val w = bmp.width; val h = bmp.height
-        val xl = l[78].x(); val xr = l[308].x()
-        val y13 = l[13].y(); val y14 = l[14].y(); val y17 = l[17].y(); val y152 = l[152].y()
-        if (xr - xl <= 0.01f || y14 - y13 <= 0.003f) return none
-        fun px(x: Float, y: Float) = bmp.getPixel((x * w).toInt().coerceIn(0, w - 1), (y * h).toInt().coerceIn(0, h - 1))
-        fun pink(c: Int): Boolean {
-            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
-            return r > 140 && (r - g) / (r + 1f) in 0.20f..0.65f && b > g * 1.03f
+        val aspect = w / h.toFloat()
+        // MediaPipe's inner-lip ring, clockwise
+        val ring = intArrayOf(78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95)
+        val xs = FloatArray(ring.size); val ys = FloatArray(ring.size)
+        for (i in ring.indices) { xs[i] = l[ring[i]].x(); ys[i] = l[ring[i]].y() }
+        var cx = 0f; var cy = 0f
+        for (i in ring.indices) { cx += xs[i]; cy += ys[i] }
+        cx /= ring.size; cy /= ring.size
+        // pull the outline in a little so the lip edge itself is never sampled
+        for (i in ring.indices) { xs[i] = cx + (xs[i] - cx) * 0.80f; ys[i] = cy + (ys[i] - cy) * 0.80f }
+        var x0 = 1f; var x1 = 0f; var y0 = 1f; var y1 = 0f
+        for (i in ring.indices) {
+            if (xs[i] < x0) x0 = xs[i]; if (xs[i] > x1) x1 = xs[i]
+            if (ys[i] < y0) y0 = ys[i]; if (ys[i] > y1) y1 = ys[i]
         }
-        val xa = xl + 0.30f * (xr - xl); val xb = xl + 0.70f * (xr - xl)
-        val gap = y14 - y13
-        var hits = 0; var n = 0; var bright = 0f
-        for (i in 0 until 8) for (j in 0 until 6) {
-            val x = xa + (xb - xa) * i / 7f
-            val y = y13 + gap * 0.10f + gap * 1.05f * j / 5f
-            val c = px(x, y)
-            if (pink(c)) hits++
-            bright += ((c shr 16) and 255)
-            n++
-        }
-        var below = 0; var m = 0
-        if (y152 - y17 > 0.01f) {
-            for (i in 0 until 8) for (j in 0 until 4) {
-                val x = xa + (xb - xa) * i / 7f
-                val y = y17 + (y152 - y17) * (0.05f + 0.35f * j / 3f)
-                if (pink(px(x, y))) below++
-                m++
-            }
-        }
-        val frac = hits / n.toFloat()
+        if (x1 - x0 < 0.01f || y1 - y0 < 0.004f) return null
 
-        // teeth: white, colourless pixels just under the upper lip / just above the lower lip
-        fun white(c: Int): Boolean {
-            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
-            return minOf(r, g, b) > 150 && (maxOf(r, g, b) - minOf(r, g, b)) < 45
-        }
-        fun band(f0: Float, f1: Float): Float {
-            var wn = 0; var tot = 0
-            for (i in 0 until 8) for (j in 0 until 3) {
-                val x = xa + (xb - xa) * i / 7f
-                val y = y13 + gap * (f0 + (f1 - f0) * j / 2f)
-                if (white(px(x, y))) wn++
-                tot++
+        fun inside(px: Float, py: Float): Boolean {
+            var c = false
+            var j = ring.size - 1
+            for (i in ring.indices) {
+                if ((ys[i] > py) != (ys[j] > py) &&
+                    px < (xs[j] - xs[i]) * (py - ys[i]) / (ys[j] - ys[i] + 1e-6f) + xs[i]) c = !c
+                j = i
             }
-            return ((wn / tot.toFloat() - 0.15f) / 0.35f).coerceIn(0f, 1f)
+            return c
         }
-        val up = band(0.08f, 0.40f)
-        val low = band(0.60f, 0.92f)
-        return floatArrayOf(((frac - 0.25f) / 0.35f).coerceIn(0f, 1f), below / maxOf(m, 1).toFloat(), bright / n, up, low)
+        fun pixel(px: Float, py: Float) =
+            bmp.getPixel((px * w).toInt().coerceIn(0, w - 1), (py * h).toInt().coerceIn(0, h - 1))
+        // saturation and brightness, 0..1
+        fun sat(c: Int): Float {
+            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
+            val mx = maxOf(r, g, b); val mn = minOf(r, g, b)
+            return if (mx == 0) 0f else (mx - mn) / mx.toFloat()
+        }
+        fun value(c: Int): Float = maxOf((c shr 16) and 255, maxOf((c shr 8) and 255, c and 255)) / 255f
+
+        // the person's own skin, in this light: both cheeks
+        var skinSat = 0f; var skinVal = 0f; var sn = 0
+        for (id in intArrayOf(50, 101, 117, 280, 330, 346)) {
+            val c = pixel(l[id].x(), l[id].y())
+            skinSat += sat(c); skinVal += value(c); sn++
+        }
+        skinSat /= sn; skinVal /= sn
+        val whiteSat = maxOf(skinSat * 0.60f, 0.08f)   // teeth: clearly less colourful than skin
+        val redSat = maxOf(skinSat * 1.15f, 0.30f)     // tongue: more colourful than skin
+        val darkVal = skinVal * 0.42f
+
+        val probe = ArrayList<Float>()
+        var upHit = 0; var upN = 0
+        var lowHit = 0; var lowN = 0
+        var red = 0; var n = 0
+        val steps = 14
+        for (i in 0 until steps) for (j in 0 until steps) {
+            val px = x0 + (x1 - x0) * (i + 0.5f) / steps
+            val py = y0 + (y1 - y0) * (j + 0.5f) / steps
+            if (!inside(px, py)) continue
+            val c = pixel(px, py)
+            val s = sat(c); val v = value(c)
+            val kind = when {
+                v < darkVal -> 0
+                s < whiteSat && v > skinVal * 0.55f -> 1
+                s > redSat -> 2
+                else -> 0
+            }
+            n++
+            if (kind == 2) red++
+            if (py < cy) { upN++; if (kind == 1) upHit++ } else { lowN++; if (kind == 1) lowHit++ }
+            probe.add(px); probe.add(py); probe.add(kind.toFloat())
+        }
+        if (n < 8) return null
+        fun sc(hit: Int, tot: Int) = if (tot < 4) 0f else ((hit / tot.toFloat() - 0.12f) / 0.30f).coerceIn(0f, 1f)
+        val redShare = red / n.toFloat()
+        val whiteShare = (upHit + lowHit) / n.toFloat()
+        // a tongue fills much of the opening with red; a thin red rim is just lip left over
+        val tongue = ((redShare - 0.35f) / 0.30f).coerceIn(0f, 1f)
+        return MouthLook(sc(upHit, upN), sc(lowHit, lowN), tongue, redShare, whiteShare, n,
+            probe.toFloatArray(), aspect)
     }
 
     /** 4x4 column-major transform -> yaw/pitch/roll in degrees (signs verified on-device in M2). */

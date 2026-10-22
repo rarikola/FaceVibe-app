@@ -15,6 +15,10 @@
             android:id="@+id/previewView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
+        <com.emomirror.app.ProbeView
+            android:id="@+id/probe"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
         <TextView
             android:id="@+id/status"
             android:layout_width="wrap_content"

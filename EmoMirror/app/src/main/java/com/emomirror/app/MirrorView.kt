@@ -35,8 +35,8 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private val bg = Paint()
 
     fun debugText(): String =
-        "tongue %.2f below %.2f bright %.0f | teeth up %.2f low %.2f | jaw %.2f".format(
-            g("tongueOutImg"), g("dbgBelow"), g("dbgBright"), g("teethUp"), g("teethLow"), g("jawOpen"))
+        "teeth up %.2f low %.2f | tongue %.2f (red %.2f white %.2f pts %.0f) | jaw %.2f".format(
+            g("teethUp"), g("teethLow"), g("tongueOutImg"), g("dbgRed"), g("dbgWhite"), g("dbgN"), g("jawOpen"))
 
     fun update(blend: Map<String, Float>, pose: FloatArray?) {
         val keys = if (blend.isEmpty()) v.keys.toList() else blend.keys.toList()
@@ -200,18 +200,18 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
         val smile = (sL + sR) / 2f
         val round = maxOf(funnel, pucker)
 
-        val tongueRaw = maxOf(b("tongueOut", 1.2f), b("tongueOutImg", 1f))
+        val tongueRaw = g("tongueOutImg")
         // on only for a strong signal, off only when it clearly fades (stops flicker and false alarms)
-        tongueOn = if (tongueOn) tongueRaw > 0.30f else tongueRaw > 0.55f
+        tongueOn = if (tongueOn) tongueRaw > 0.20f else tongueRaw > 0.45f
         val tongue = if (tongueOn) tongueRaw.coerceAtLeast(0.4f) else 0f
 
         val xm = cx + shift
         // teeth come from the camera picture (white pixels inside the opening), with on/off hysteresis
-        upOn = if (upOn) g("teethUp") > 0.25f else g("teethUp") > 0.5f
-        lowOn = if (lowOn) g("teethLow") > 0.25f else g("teethLow") > 0.5f
+        upOn = if (upOn) g("teethUp") > 0.15f else g("teethUp") > 0.35f
+        lowOn = if (lowOn) g("teethLow") > 0.15f else g("teethLow") > 0.35f
 
         // rounded lips ("Oh", "oo", kiss): a smooth oval, no teeth
-        if (round > 0.35f && smile < 0.5f) {
+        if (round > 0.35f && smile < 0.5f && !upOn && !lowOn && tongue < 0.25f) {
             val rw = r * (0.10f + 0.07f * (1f - round) + stretch * 0.05f)
             val rh = maxOf(r * 0.07f, jaw * r * 0.50f + funnel * r * 0.08f)
             val oval = RectF(xm - rw, y - rh * 0.4f, xm + rw, y + rh * 1.2f)
