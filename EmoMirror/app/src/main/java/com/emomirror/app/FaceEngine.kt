@@ -116,8 +116,8 @@ class FaceEngine(
             map["teethUp"] = m?.upper ?: 0f
             map["teethLow"] = m?.lower ?: 0f
             map["tongueOutImg"] = m?.tongue ?: 0f
-            map["dbgFlesh"] = m?.fleshShare ?: 0f
-            map["dbgTeeth"] = m?.teethShare ?: 0f
+            map["dbgFlesh"] = m?.fleshRowShare ?: 0f
+            map["dbgBand"] = m?.teethBand ?: 0f
             map["dbgN"] = (m?.count ?: 0).toFloat()
             map["dbgOpen"] = m?.openRatio ?: 0f
 
@@ -132,7 +132,7 @@ class FaceEngine(
 
     class MouthLook(
         val upper: Float, val lower: Float, val tongue: Float,
-        val fleshShare: Float, val teethShare: Float, val count: Int,
+        val fleshRowShare: Float, val teethBand: Float, val count: Int,
         val probe: FloatArray, val aspect: Float, val openRatio: Float
     )
 
@@ -149,6 +149,10 @@ class FaceEngine(
      *   - the gap is simply dark
      * The line between teeth and tongue therefore sits at 0.73, and does not move with the light,
      * because the camera's own white balance already takes the colour of the room out.
+     *
+     * The colours are then read as shapes, row by row, because where a thing sits matters as much
+     * as its colour: teeth are an unbroken block of rows against a lip, while a tongue fills the
+     * whole opening and an open mouth without one has a dark hole down its middle.
      */
     private fun mouthLook(l: List<NormalizedLandmark>, input: MPImage): MouthLook? {
         if (l.size < 468) return null
@@ -194,59 +198,101 @@ class FaceEngine(
         fun pixel(px: Float, py: Float) =
             bmp.getPixel((px * w).toInt().coerceIn(0, w - 1), (py * h).toInt().coerceIn(0, h - 1))
 
-        // first pass: collect the points inside the opening and find the brightest of them
+        // Sample a square grid over the opening, keeping where each point sat, so the shapes
+        // can be read and not just the colours.
         val steps = 20
-        val px = FloatArray(steps * steps); val py = FloatArray(steps * steps); val col = IntArray(steps * steps)
-        var n = 0
+        val cls = IntArray(steps * steps) { -1 }        // -1 outside, 0 dark, 1 teeth, 2 tongue, 3 unknown
+        val gx = FloatArray(steps * steps); val gy = FloatArray(steps * steps)
         var maxV = 0
-        for (i in 0 until steps) for (j in 0 until steps) {
+        val raw = IntArray(steps * steps)
+        var n = 0
+        for (j in 0 until steps) for (i in 0 until steps) {
             val x = x0 + (x1 - x0) * (i + 0.5f) / steps
             val y = y0 + (y1 - y0) * (j + 0.5f) / steps
             if (!inside(x, y)) continue
+            val k = j * steps + i
             val c = pixel(x, y)
+            raw[k] = c; gx[k] = x; gy[k] = y; cls[k] = 3
             val v = maxOf((c shr 16) and 255, maxOf((c shr 8) and 255, c and 255))
             if (v > maxV) maxV = v
-            px[n] = x; py[n] = y; col[n] = c; n++
+            n++
         }
-        if (n < 10) return MouthLook(0f, 0f, 0f, 0f, 0f, n, FloatArray(0), aspect, openRatio)
+        if (n < 20) return MouthLook(0f, 0f, 0f, 0f, 0f, n, FloatArray(0), aspect, openRatio)
 
-        // second pass: sort each point into teeth, tongue or gap
-        val probe = FloatArray(n * 3)
-        var teeth = 0; var flesh = 0; var judged = 0
-        var upHit = 0; var upN = 0; var lowHit = 0; var lowN = 0
         val darkV = maxOf(maxV * 0.45f, 45f)
-        val midY = (y0 + y1) / 2f
-        for (k in 0 until n) {
-            val c = col[k]
+        for (k in cls.indices) {
+            if (cls[k] < 0) continue
+            val c = raw[k]
             val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
             val v = maxOf(r, maxOf(g, b))
             val gr = if (r < 10) 1f else g / r.toFloat()
             val sat = if (v == 0) 0f else (v - minOf(r, minOf(g, b))) / v.toFloat()
-            val kind = when {
-                minOf(r, minOf(g, b)) > 236 -> 3  // clipped to white: carries no colour, says nothing
+            cls[k] = when {
+                minOf(r, minOf(g, b)) > 236 -> 3  // clipped to white: no colour left, says nothing
                 v < darkV -> 0                    // the gap and the throat
                 gr >= 0.73f && sat <= 0.33f -> 1  // teeth
                 gr < 0.70f -> 2                   // tongue
-                else -> 3                         // in between: says nothing either way
+                else -> 3
             }
-            if (kind != 3) {
-                judged++
-                if (kind == 1) teeth++
-                if (kind == 2) flesh++
-                if (py[k] < midY) { upN++; if (kind == 1) upHit++ } else { lowN++; if (kind == 1) lowHit++ }
-            }
-            probe[k * 3] = px[k]; probe[k * 3 + 1] = py[k]; probe[k * 3 + 2] = kind.toFloat()
         }
-        if (judged < 8) return MouthLook(0f, 0f, 0f, 0f, 0f, judged, probe, aspect, openRatio)
 
-        fun sc(hit: Int, tot: Int) = if (tot < 4) 0f else ((hit / tot.toFloat() - 0.18f) / 0.25f).coerceIn(0f, 1f)
-        val fleshShare = flesh / judged.toFloat()
-        val teethShare = teeth / judged.toFloat()
-        // an open mouth with no tongue still shows some flesh (inner lip, the tongue lying low):
-        // measured at about 0.57, against about 0.92 when the tongue is really out
-        val tongue = ((fleshShare - 0.62f) / 0.15f).coerceIn(0f, 1f)
-        return MouthLook(sc(upHit, upN), sc(lowHit, lowN), tongue, fleshShare, teethShare, judged,
-            probe, aspect, openRatio)
+        // Row by row. Teeth form one unbroken block of rows; a tongue makes nearly every row
+        // flesh; an open mouth with no tongue has a dark hole down the middle, so only its
+        // edge rows are flesh. (Measured on real frames: teeth band 16 rows for a smile and
+        // none otherwise; rows that are mostly flesh 100% for a tongue against 40% for an "O".)
+        var firstRow = -1; var lastRow = -1
+        var fleshRows = 0; var validRows = 0
+        val teethFrac = FloatArray(steps)
+        for (j in 0 until steps) {
+            var judged = 0; var teeth = 0; var flesh = 0
+            for (i in 0 until steps) {
+                val c = cls[j * steps + i]
+                if (c < 0 || c == 3) continue
+                judged++
+                if (c == 1) teeth++ else if (c == 2) flesh++
+            }
+            if (judged < 4) { teethFrac[j] = -1f; continue }
+            if (firstRow < 0) firstRow = j
+            lastRow = j
+            validRows++
+            teethFrac[j] = teeth / judged.toFloat()
+            if (flesh / judged.toFloat() >= 0.60f) fleshRows++
+        }
+        if (validRows < 6) return MouthLook(0f, 0f, 0f, 0f, 0f, n, FloatArray(0), aspect, openRatio)
+
+        val midRow = (firstRow + lastRow) / 2
+        var upper = 0f; var lower = 0f; var bestBand = 0
+        var runStart = -1; var runSum = 0f; var runLen = 0
+        fun closeRun(endRow: Int) {
+            if (runLen >= 2) {
+                if (runLen > bestBand) bestBand = runLen
+                val cover = runSum / runLen
+                val score = (runLen / 4f).coerceAtMost(1f) * ((cover - 0.45f) / 0.25f).coerceIn(0f, 1f)
+                if (runStart <= midRow) upper = maxOf(upper, score)
+                if (endRow >= midRow) lower = maxOf(lower, score)
+            }
+            runStart = -1; runSum = 0f; runLen = 0
+        }
+        for (j in 0 until steps) {
+            val f = teethFrac[j]
+            if (f < 0f) continue
+            if (f >= 0.50f) {
+                if (runStart < 0) runStart = j
+                runSum += f; runLen++
+            } else closeRun(j - 1)
+        }
+        closeRun(lastRow)
+
+        val fleshRowShare = fleshRows / validRows.toFloat()
+        val tongue = ((fleshRowShare - 0.55f) / 0.25f).coerceIn(0f, 1f)
+
+        val probe = FloatArray(n * 3)
+        var p = 0
+        for (k in cls.indices) {
+            if (cls[k] < 0) continue
+            probe[p] = gx[k]; probe[p + 1] = gy[k]; probe[p + 2] = cls[k].toFloat(); p += 3
+        }
+        return MouthLook(upper, lower, tongue, fleshRowShare, bestBand / 20f, n, probe, aspect, openRatio)
     }
 
     /** 4x4 column-major transform -> yaw/pitch/roll in degrees (signs verified on-device in M2). */

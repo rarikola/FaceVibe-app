@@ -35,8 +35,8 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private val bg = Paint()
 
     fun debugText(): String =
-        "teeth up %.2f low %.2f | tongue %.2f | shares teeth %.2f flesh %.2f | pts %.0f open %.2f".format(
-            g("teethUp"), g("teethLow"), g("tongueOutImg"), g("dbgTeeth"), g("dbgFlesh"), g("dbgN"), g("dbgOpen"))
+        "teeth up %.2f low %.2f | tongue %.2f | band %.2f fleshrows %.2f | pts %.0f open %.2f".format(
+            g("teethUp"), g("teethLow"), g("tongueOutImg"), g("dbgBand"), g("dbgFlesh"), g("dbgN"), g("dbgOpen"))
 
     fun update(blend: Map<String, Float>, pose: FloatArray?) {
         val keys = if (blend.isEmpty()) v.keys.toList() else blend.keys.toList()
@@ -206,13 +206,13 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
 
         val tongueRaw = g("tongueOutImg")
         // on only for a strong signal, off only when it clearly fades (stops flicker and false alarms)
-        tongueOn = if (tongueOn) tongueRaw > 0.30f else tongueRaw > 0.60f
+        tongueOn = if (tongueOn) tongueRaw > 0.25f else tongueRaw > 0.50f
         val tongue = if (tongueOn) tongueRaw.coerceAtLeast(0.4f) else 0f
 
         val xm = cx + shift
         // teeth come from the camera picture (white pixels inside the opening), with on/off hysteresis
-        upOn = if (upOn) g("teethUp") > 0.25f else g("teethUp") > 0.55f
-        lowOn = if (lowOn) g("teethLow") > 0.25f else g("teethLow") > 0.55f
+        upOn = if (upOn) g("teethUp") > 0.25f else g("teethUp") > 0.50f
+        lowOn = if (lowOn) g("teethLow") > 0.25f else g("teethLow") > 0.50f
 
         // rounded lips ("Oh", "oo", kiss): a smooth oval, no teeth
         if (round > 0.35f && smile < 0.5f && !upOn && !lowOn && tongue < 0.25f) {
