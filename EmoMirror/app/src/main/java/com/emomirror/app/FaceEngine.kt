@@ -141,8 +141,8 @@ class FaceEngine(
      *
      * Everything is judged against the person's own cheek skin in the same light, so it works for
      * any skin tone, any teeth colour and any lighting:
-     *   - teeth  = much less colourful than skin, and not dark  (cream and yellow count as white)
-     *   - tongue = more colourful and redder than skin
+     *   - teeth  = far less red-over-green than skin, and not dark (cream and yellow both count)
+     *   - tongue = far more red-over-green than skin
      *   - gap    = dark
      * Only points inside the inner-lip outline are read, so the lips themselves are never counted.
      */
@@ -167,7 +167,7 @@ class FaceEngine(
         cx /= ring.size; cy /= ring.size
         // pull the outline in a little so the lip edge itself is never sampled
         // the opening is far shorter than it is wide, so the top and bottom edges need pulling in harder
-        for (i in ring.indices) { xs[i] = cx + (xs[i] - cx) * 0.82f; ys[i] = cy + (ys[i] - cy) * 0.60f }
+        for (i in ring.indices) { xs[i] = cx + (xs[i] - cx) * 0.84f; ys[i] = cy + (ys[i] - cy) * 0.70f }
         var x0 = 1f; var x1 = 0f; var y0 = 1f; var y1 = 0f
         for (i in ring.indices) {
             if (xs[i] < x0) x0 = xs[i]; if (xs[i] > x1) x1 = xs[i]
@@ -187,24 +187,27 @@ class FaceEngine(
         }
         fun pixel(px: Float, py: Float) =
             bmp.getPixel((px * w).toInt().coerceIn(0, w - 1), (py * h).toInt().coerceIn(0, h - 1))
-        // saturation and brightness, 0..1
-        fun sat(c: Int): Float {
-            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
-            val mx = maxOf(r, g, b); val mn = minOf(r, g, b)
-            return if (mx == 0) 0f else (mx - mn) / mx.toFloat()
+        /**
+         * How much more red than green a pixel is. This is what actually separates the parts of a mouth:
+         * teeth (cream or yellow) have almost none, lips and tongue have a lot, skin sits in between.
+         * Being a ratio, it barely moves when the light changes.
+         */
+        fun redness(c: Int): Float {
+            val r = (c shr 16) and 255; val g = (c shr 8) and 255
+            return if (r < 12) 0f else (r - g) / r.toFloat()
         }
         fun value(c: Int): Float = maxOf((c shr 16) and 255, maxOf((c shr 8) and 255, c and 255)) / 255f
 
         // the person's own skin, in this light: both cheeks
-        var skinSat = 0f; var skinVal = 0f; var sn = 0
+        var skinRed = 0f; var skinVal = 0f; var sn = 0
         for (id in intArrayOf(50, 101, 117, 280, 330, 346)) {
             val c = pixel(l[id].x(), l[id].y())
-            skinSat += sat(c); skinVal += value(c); sn++
+            skinRed += redness(c); skinVal += value(c); sn++
         }
-        skinSat /= sn; skinVal /= sn
-        val whiteSat = maxOf(skinSat * 0.60f, 0.08f)   // teeth: clearly less colourful than skin
-        val redSat = maxOf(skinSat * 1.15f, 0.30f)     // tongue: more colourful than skin
-        val darkVal = skinVal * 0.42f
+        skinRed /= sn; skinVal /= sn
+        val teethRed = skinRed * 0.65f               // teeth: far less red-over-green than skin
+        val fleshRed = maxOf(skinRed * 1.30f, 0.26f) // lip and tongue: much more
+        val darkVal = skinVal * 0.30f
 
         val probe = ArrayList<Float>()
         var upHit = 0; var upN = 0
@@ -216,11 +219,11 @@ class FaceEngine(
             val py = y0 + (y1 - y0) * (j + 0.5f) / steps
             if (!inside(px, py)) continue
             val c = pixel(px, py)
-            val s = sat(c); val v = value(c)
+            val rg = redness(c); val v = value(c)
             val kind = when {
-                v < darkVal -> 0
-                s < whiteSat && v > skinVal * 0.55f -> 1
-                s > redSat -> 2
+                v < darkVal -> 0                    // the gap and the throat
+                rg < teethRed && v > skinVal * 0.33f -> 1   // teeth, however yellow or shadowed
+                rg > fleshRed -> 2                  // tongue (lips are outside the outline)
                 else -> 0
             }
             n++
@@ -229,11 +232,11 @@ class FaceEngine(
             probe.add(px); probe.add(py); probe.add(kind.toFloat())
         }
         if (n < 14) return MouthLook(0f, 0f, 0f, 0f, 0f, n, probe.toFloatArray(), aspect, openRatio)
-        fun sc(hit: Int, tot: Int) = if (tot < 4) 0f else ((hit / tot.toFloat() - 0.12f) / 0.30f).coerceIn(0f, 1f)
+        fun sc(hit: Int, tot: Int) = if (tot < 5) 0f else ((hit / tot.toFloat() - 0.10f) / 0.28f).coerceIn(0f, 1f)
         val redShare = red / n.toFloat()
         val whiteShare = (upHit + lowHit) / n.toFloat()
         // a tongue fills much of the opening with red; a thin red rim is just lip left over
-        val tongue = ((redShare - 0.35f) / 0.30f).coerceIn(0f, 1f)
+        val tongue = ((redShare - 0.45f) / 0.25f).coerceIn(0f, 1f)
         return MouthLook(sc(upHit, upN), sc(lowHit, lowN), tongue, redShare, whiteShare, n,
             probe.toFloatArray(), aspect, openRatio)
     }

@@ -45,7 +45,7 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
             val old = v[k] ?: 0f
             val a = when {
                 k.startsWith("eyeBlink") -> 0.75f
-                k == "teethUp" || k == "teethLow" || k == "tongueOutImg" -> 0.30f  // steadier: these come from pixels
+                k == "teethUp" || k == "teethLow" || k == "tongueOutImg" -> 0.22f  // steadier: these come from pixels
                 else -> 0.55f
             }
             v[k] = old + a * (target - old)
@@ -206,13 +206,13 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
 
         val tongueRaw = g("tongueOutImg")
         // on only for a strong signal, off only when it clearly fades (stops flicker and false alarms)
-        tongueOn = if (tongueOn) tongueRaw > 0.20f else tongueRaw > 0.45f
+        tongueOn = if (tongueOn) tongueRaw > 0.25f else tongueRaw > 0.55f
         val tongue = if (tongueOn) tongueRaw.coerceAtLeast(0.4f) else 0f
 
         val xm = cx + shift
         // teeth come from the camera picture (white pixels inside the opening), with on/off hysteresis
-        upOn = if (upOn) g("teethUp") > 0.15f else g("teethUp") > 0.35f
-        lowOn = if (lowOn) g("teethLow") > 0.15f else g("teethLow") > 0.35f
+        upOn = if (upOn) g("teethUp") > 0.22f else g("teethUp") > 0.45f
+        lowOn = if (lowOn) g("teethLow") > 0.22f else g("teethLow") > 0.45f
 
         // rounded lips ("Oh", "oo", kiss): a smooth oval, no teeth
         if (round > 0.35f && smile < 0.5f && !upOn && !lowOn && tongue < 0.25f) {
