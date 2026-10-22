@@ -20,6 +20,8 @@ import kotlin.math.min
  */
 class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : View(ctx, attrs) {
 
+    companion object { private const val HOLD = 8 }  // ~0.3 s of agreement before anything changes
+
     private val v = HashMap<String, Float>()
     private var yaw = 0f
     private var pitch = 0f
@@ -35,8 +37,9 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private val bg = Paint()
 
     fun debugText(): String =
-        "teeth up %.2f low %.2f | tongue %.2f | band %.2f fleshrows %.2f | pts %.0f open %.2f".format(
-            g("teethUp"), g("teethLow"), g("tongueOutImg"), g("dbgBand"), g("dbgFlesh"), g("dbgN"), g("dbgOpen"))
+        "teeth %.2f/%.2f tongue %.2f | band %.2f rows %.2f | g/r %.2f pts %.0f open %.2f".format(
+            g("teethUp"), g("teethLow"), g("tongueOutImg"), g("dbgBand"), g("dbgFlesh"),
+            g("dbgGr"), g("dbgN"), g("dbgOpen"))
 
     fun update(blend: Map<String, Float>, pose: FloatArray?) {
         val keys = if (blend.isEmpty()) v.keys.toList() else blend.keys.toList()
@@ -63,6 +66,16 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     private var tongueOn = false
     private var upOn = false
     private var lowOn = false
+    private val agree = IntArray(3)
+
+    /** Flip only after the same answer has arrived HOLD frames in a row. */
+    private fun steady(slot: Int, want: Boolean, now: Boolean): Boolean {
+        if (want == now) { agree[slot] = 0; return now }
+        agree[slot]++
+        if (agree[slot] < HOLD) return now
+        agree[slot] = 0
+        return want
+    }
 
     private fun fold(a: Float): Float {
         var x = a
@@ -204,15 +217,15 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
         val smile = (sL + sR) / 2f
         val round = maxOf(funnel, pucker)
 
-        val tongueRaw = g("tongueOutImg")
-        // on only for a strong signal, off only when it clearly fades (stops flicker and false alarms)
-        tongueOn = if (tongueOn) tongueRaw > 0.25f else tongueRaw > 0.50f
-        val tongue = if (tongueOn) tongueRaw.coerceAtLeast(0.4f) else 0f
+        tongueOn = steady(2, g("tongueOutImg") > 0.40f, tongueOn)
+        val tongue = if (tongueOn) 0.8f else 0f
 
         val xm = cx + shift
-        // teeth come from the camera picture (white pixels inside the opening), with on/off hysteresis
-        upOn = if (upOn) g("teethUp") > 0.25f else g("teethUp") > 0.50f
-        lowOn = if (lowOn) g("teethLow") > 0.25f else g("teethLow") > 0.50f
+        // Teeth and tongue come from the camera picture, which is noisier than the face tracker.
+        // Nothing changes on screen until the same answer has come back several frames running,
+        // so a single odd frame can never make it blink.
+        upOn = steady(0, g("teethUp") > 0.38f, upOn).also { upOn = it }
+        lowOn = steady(1, g("teethLow") > 0.38f, lowOn).also { lowOn = it }
 
         // rounded lips ("Oh", "oo", kiss): a smooth oval, no teeth
         if (round > 0.35f && smile < 0.5f && !upOn && !lowOn && tongue < 0.25f) {

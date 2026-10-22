@@ -42,6 +42,12 @@ class MainActivity : ComponentActivity() {
     private lateinit var analysisExecutor: ExecutorService
     private var engine: FaceEngine? = null
     private var debug = false
+    // short set-up: hold teeth, then hold tongue, and the app learns where this person's own
+    // line between the two sits, instead of using a number picked in advance
+    private var calStep = 0            // 0 off, 1 get ready teeth, 2 teeth, 3 ready tongue, 4 tongue
+    private var calStart = 0L
+    private val calVals = ArrayList<Float>()
+    private var calTeeth = 0f
     private lateinit var probe: ProbeView
 
     private val permissionLauncher =
@@ -84,6 +90,7 @@ class MainActivity : ComponentActivity() {
             probe.on = debug
             status.visibility = if (debug) View.VISIBLE else View.GONE
         }
+        findViewById<View>(R.id.setup).setOnClickListener { startCal() }
         findViewById<View>(R.id.captureBtn).setOnClickListener { capture() }
         findViewById<View>(R.id.shareBtn).setOnClickListener { share() }
 
@@ -97,6 +104,55 @@ class MainActivity : ComponentActivity() {
         (feed.layoutParams as LinearLayout.LayoutParams).weight = f * 100f
         (bottom.layoutParams as LinearLayout.LayoutParams).weight = (1f - f) * 100f
         root.requestLayout()
+    }
+
+    private fun startCal() {
+        calStep = 1; calStart = android.os.SystemClock.uptimeMillis(); calVals.clear()
+        status.visibility = View.VISIBLE
+    }
+
+    private fun calFrame(f: FaceFrame) {
+        val now = android.os.SystemClock.uptimeMillis()
+        val el = now - calStart
+        val gr = f.blend["dbgGr"] ?: 0f
+        val open = (f.blend["dbgOpen"] ?: 0f) > 0.13f
+        fun phase(label: String, ready: Boolean) {
+            status.text = if (ready) "$label — hold it… ${((2500 - el) / 1000) + 1}" else label
+        }
+        when (calStep) {
+            1 -> { phase("Show me your teeth", false); if (el > 1800) { calStep = 2; calStart = now; calVals.clear() } }
+            2 -> {
+                phase("Show me your teeth", true)
+                if (open && gr > 0f) calVals.add(gr)
+                if (el > 2500) {
+                    calTeeth = median(calVals)
+                    calStep = 3; calStart = now; calVals.clear()
+                }
+            }
+            3 -> { phase("Now stick your tongue out", false); if (el > 1800) { calStep = 4; calStart = now; calVals.clear() } }
+            4 -> {
+                phase("Now stick your tongue out", true)
+                if (open && gr > 0f) calVals.add(gr)
+                if (el > 2500) {
+                    val tongue = median(calVals)
+                    calStep = 0
+                    if (calTeeth > 0f && tongue > 0f && calTeeth - tongue > 0.03f) {
+                        val cut = (calTeeth + tongue) / 2f
+                        engine?.grCut = cut
+                        getSharedPreferences("em", MODE_PRIVATE).edit().putFloat("grCut", cut).apply()
+                        Toast.makeText(this, "Set up — teeth %.2f, tongue %.2f".format(calTeeth, tongue), Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this, "Could not tell them apart — try again in better light", Toast.LENGTH_LONG).show()
+                    }
+                    status.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun median(v: List<Float>): Float {
+        if (v.size < 5) return 0f
+        val s = v.sorted(); return s[s.size / 2]
     }
 
     private fun capture() {
@@ -158,6 +214,7 @@ class MainActivity : ComponentActivity() {
                     onError = { msg -> runOnUiThread { status.text = "Error: $msg" } }
                 )
                 engine = eng
+                eng.grCut = getSharedPreferences("em", MODE_PRIVATE).getFloat("grCut", 0.70f)
                 val preview = Preview.Builder().build()
                     .also { it.setSurfaceProvider(previewView.surfaceProvider) }
                 val analysis = ImageAnalysis.Builder()
@@ -178,6 +235,7 @@ class MainActivity : ComponentActivity() {
     private fun showFrame(f: FaceFrame) {
         mirror.update(if (f.hasFace) f.blend else emptyMap(), f.pose)
         probe.update(if (f.hasFace) f.probe else null, f.srcAspect)
+        if (calStep > 0) { calFrame(f); return }
         if (debug) {
             status.text = mirror.debugText()
             status.visibility = View.VISIBLE

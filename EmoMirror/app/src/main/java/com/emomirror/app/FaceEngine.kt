@@ -118,6 +118,7 @@ class FaceEngine(
             map["tongueOutImg"] = m?.tongue ?: 0f
             map["dbgFlesh"] = m?.fleshRowShare ?: 0f
             map["dbgBand"] = m?.teethBand ?: 0f
+            map["dbgGr"] = m?.grMid ?: 0f
             map["dbgN"] = (m?.count ?: 0).toFloat()
             map["dbgOpen"] = m?.openRatio ?: 0f
 
@@ -133,7 +134,7 @@ class FaceEngine(
     class MouthLook(
         val upper: Float, val lower: Float, val tongue: Float,
         val fleshRowShare: Float, val teethBand: Float, val count: Int,
-        val probe: FloatArray, val aspect: Float, val openRatio: Float
+        val probe: FloatArray, val aspect: Float, val openRatio: Float, val grMid: Float = 0f
     )
 
     /**
@@ -154,6 +155,9 @@ class FaceEngine(
      * as its colour: teeth are an unbroken block of rows against a lip, while a tongue fills the
      * whole opening and an open mouth without one has a dark hole down its middle.
      */
+    /** Where the line between teeth and tongue sits. The short set-up moves it to fit this person. */
+    @Volatile var grCut = 0.70f
+
     private fun mouthLook(l: List<NormalizedLandmark>, input: MPImage): MouthLook? {
         if (l.size < 468) return null
         val bmp = BitmapExtractor.extract(input)
@@ -220,6 +224,7 @@ class FaceEngine(
         if (n < 20) return MouthLook(0f, 0f, 0f, 0f, 0f, n, FloatArray(0), aspect, openRatio)
 
         val darkV = maxOf(maxV * 0.45f, 45f)
+        val grs = FloatArray(cls.size); var grN = 0
         for (k in cls.indices) {
             if (cls[k] < 0) continue
             val c = raw[k]
@@ -227,13 +232,15 @@ class FaceEngine(
             val v = maxOf(r, maxOf(g, b))
             val gr = if (r < 10) 1f else g / r.toFloat()
             val sat = if (v == 0) 0f else (v - minOf(r, minOf(g, b))) / v.toFloat()
+            // One line, no gap: everything that is not dark is either teeth or tongue. A gap here
+            // means that in some lighting every point lands in it and the whole reading goes blank.
             cls[k] = when {
-                minOf(r, minOf(g, b)) > 236 -> 3  // clipped to white: no colour left, says nothing
+                minOf(r, minOf(g, b)) > 240 -> 3  // clipped to white: no colour left, says nothing
                 v < darkV -> 0                    // the gap and the throat
-                gr >= 0.73f && sat <= 0.33f -> 1  // teeth
-                gr < 0.70f -> 2                   // tongue
-                else -> 3
+                gr - 0.25f * sat >= grCut -> 1    // teeth
+                else -> 2                         // tongue
             }
+            if (cls[k] != 3) grs[grN++] = gr - 0.25f * sat
         }
 
         // Row by row. Teeth form one unbroken block of rows; a tongue makes nearly every row
@@ -283,6 +290,10 @@ class FaceEngine(
         }
         closeRun(lastRow)
 
+        // the middle value, used by the short set-up that learns this person's own mouth
+        var grMid = 0f
+        if (grN > 0) { java.util.Arrays.sort(grs, 0, grN); grMid = grs[grN / 2] }
+
         val fleshRowShare = fleshRows / validRows.toFloat()
         val tongue = ((fleshRowShare - 0.55f) / 0.25f).coerceIn(0f, 1f)
 
@@ -292,7 +303,7 @@ class FaceEngine(
             if (cls[k] < 0) continue
             probe[p] = gx[k]; probe[p + 1] = gy[k]; probe[p + 2] = cls[k].toFloat(); p += 3
         }
-        return MouthLook(upper, lower, tongue, fleshRowShare, bestBand / 20f, n, probe, aspect, openRatio)
+        return MouthLook(upper, lower, tongue, fleshRowShare, bestBand / 20f, n, probe, aspect, openRatio, grMid)
     }
 
     /** 4x4 column-major transform -> yaw/pitch/roll in degrees (signs verified on-device in M2). */

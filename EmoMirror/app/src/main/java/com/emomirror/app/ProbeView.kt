@@ -37,10 +37,12 @@ class ProbeView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = n
             p.color = when (a[i + 2].toInt()) {
                 1 -> Color.parseColor("#00E5FF")   // read as teeth
                 2 -> Color.parseColor("#FF2D7A")   // read as tongue
-                3 -> Color.parseColor("#FFD400")   // too shiny to judge, ignored
+                3 -> Color.parseColor("#FFD400")   // clipped to white, ignored
                 else -> Color.parseColor("#80FFFFFF") // read as dark
             }
-            c.drawCircle(x, y, 4f * resources.displayMetrics.density, p)
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = 1.5f * resources.displayMetrics.density
+            c.drawCircle(x, y, 2.5f * resources.displayMetrics.density, p)
             i += 3
         }
     }
