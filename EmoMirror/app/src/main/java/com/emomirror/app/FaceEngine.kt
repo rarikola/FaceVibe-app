@@ -141,12 +141,14 @@ class FaceEngine(
      * see teeth or a tongue at all.
      *
      * Only the area inside the inner-lip outline is read, so the lips are never counted. Every point
-     * is judged by how much green it has next to its red:
-     *   - teeth  sit near 0.9  (white, cream and yellow all do)
-     *   - tongue sits near 0.6 (so do lips, which is why they are kept outside the outline)
+     * is judged by how much green it has next to its red, and by how colourful it is. Measured off
+     * real camera frames:
+     *   - teeth  green/red 0.80..0.88, barely colourful (about 0.22)
+     *   - tongue green/red 0.60..0.66, colourful (about 0.37)
+     *   - lips   green/red 0.50..0.60, very colourful (and kept outside the outline anyway)
      *   - the gap is simply dark
-     * The gap between those two is wide and does not move with the light, since the camera's own
-     * white balance already takes the colour of the room out.
+     * The line between teeth and tongue therefore sits at 0.73, and does not move with the light,
+     * because the camera's own white balance already takes the colour of the room out.
      */
     private fun mouthLook(l: List<NormalizedLandmark>, input: MPImage): MouthLook? {
         if (l.size < 468) return null
@@ -212,19 +214,20 @@ class FaceEngine(
         val probe = FloatArray(n * 3)
         var teeth = 0; var flesh = 0; var judged = 0
         var upHit = 0; var upN = 0; var lowHit = 0; var lowN = 0
-        val darkV = maxV * 0.42f
+        val darkV = maxOf(maxV * 0.45f, 45f)
         val midY = (y0 + y1) / 2f
         for (k in 0 until n) {
             val c = col[k]
             val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
             val v = maxOf(r, maxOf(g, b))
             val gr = if (r < 10) 1f else g / r.toFloat()
+            val sat = if (v == 0) 0f else (v - minOf(r, minOf(g, b))) / v.toFloat()
             val kind = when {
-                minOf(r, g, b) > 236 -> 3      // clipped to white: carries no colour, so it says nothing
-                v < darkV -> 0                 // the gap and the throat
-                gr > 0.80f -> 1                // teeth, however yellow
-                gr < 0.78f -> 2                // tongue
-                else -> 0
+                minOf(r, minOf(g, b)) > 236 -> 3  // clipped to white: carries no colour, says nothing
+                v < darkV -> 0                    // the gap and the throat
+                gr >= 0.73f && sat <= 0.33f -> 1  // teeth
+                gr < 0.70f -> 2                   // tongue
+                else -> 3                         // in between: says nothing either way
             }
             if (kind != 3) {
                 judged++
@@ -236,11 +239,12 @@ class FaceEngine(
         }
         if (judged < 8) return MouthLook(0f, 0f, 0f, 0f, 0f, judged, probe, aspect, openRatio)
 
-        fun sc(hit: Int, tot: Int) = if (tot < 4) 0f else ((hit / tot.toFloat() - 0.12f) / 0.28f).coerceIn(0f, 1f)
+        fun sc(hit: Int, tot: Int) = if (tot < 4) 0f else ((hit / tot.toFloat() - 0.18f) / 0.25f).coerceIn(0f, 1f)
         val fleshShare = flesh / judged.toFloat()
         val teethShare = teeth / judged.toFloat()
-        // a tongue fills the opening; a sliver of inner lip does not
-        val tongue = ((fleshShare - 0.50f) / 0.25f).coerceIn(0f, 1f)
+        // an open mouth with no tongue still shows some flesh (inner lip, the tongue lying low):
+        // measured at about 0.57, against about 0.92 when the tongue is really out
+        val tongue = ((fleshShare - 0.62f) / 0.15f).coerceIn(0f, 1f)
         return MouthLook(sc(upHit, upN), sc(lowHit, lowN), tongue, fleshShare, teethShare, judged,
             probe, aspect, openRatio)
     }

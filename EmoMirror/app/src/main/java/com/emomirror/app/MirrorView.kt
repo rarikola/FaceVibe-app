@@ -206,13 +206,13 @@ class MirrorView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
 
         val tongueRaw = g("tongueOutImg")
         // on only for a strong signal, off only when it clearly fades (stops flicker and false alarms)
-        tongueOn = if (tongueOn) tongueRaw > 0.25f else tongueRaw > 0.55f
+        tongueOn = if (tongueOn) tongueRaw > 0.30f else tongueRaw > 0.60f
         val tongue = if (tongueOn) tongueRaw.coerceAtLeast(0.4f) else 0f
 
         val xm = cx + shift
         // teeth come from the camera picture (white pixels inside the opening), with on/off hysteresis
-        upOn = if (upOn) g("teethUp") > 0.22f else g("teethUp") > 0.45f
-        lowOn = if (lowOn) g("teethLow") > 0.22f else g("teethLow") > 0.45f
+        upOn = if (upOn) g("teethUp") > 0.25f else g("teethUp") > 0.55f
+        lowOn = if (lowOn) g("teethLow") > 0.25f else g("teethLow") > 0.55f
 
         // rounded lips ("Oh", "oo", kiss): a smooth oval, no teeth
         if (round > 0.35f && smile < 0.5f && !upOn && !lowOn && tongue < 0.25f) {
